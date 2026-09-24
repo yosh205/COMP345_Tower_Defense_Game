@@ -1,0 +1,13 @@
+every position is (row, col)
+(0,0) is top left
+position struct with .row and .col
+for GUI: screen x from col, screen y from row
+
+const Map& to use the map, can't modify since it is const
+
+map.canPlaceTower(row, col) checks if tower can be placed on a cell, it doesn't know if there is a tower there through
+
+call for critters map.findPath() once per wave and not every frame 
+path.front() is entry
+path.back() is exist
+empty vector/array is a broken map 
