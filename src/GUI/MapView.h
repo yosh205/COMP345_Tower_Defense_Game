@@ -17,23 +17,23 @@
  */
 class MapView {
 public:
-    /** @param cellSize Width and height of one cell, in pixels. */
     explicit MapView(float cellSize = 48.f);
 
-    /**
-     * @brief Draws every cell of the map, then marks the route from findPath().
-     * @param window The window to draw into.
-     * @param map    The map to draw.
-     */
     void draw(sf::RenderWindow& window, const Map& map) const;
 
-    /** @return Size of one cell, in pixels. */
     float getCellSize() const;
+    void setCellSize(float size);
+
+    /** @brief Top-left of the map in window pixels (for centering). */
+    void setOrigin(float x, float y);
+    float getOriginX() const;
+    float getOriginY() const;
 
 private:
-    float cellSize; ///< Width and height of one cell, in pixels.
+    float cellSize;
+    float originX = 0.f;
+    float originY = 0.f;
 
-    /** @brief Returns the fill colour for a cell type. */
     sf::Color colorFor(CellType type) const;
 };
 
