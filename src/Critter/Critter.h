@@ -42,6 +42,10 @@ public:
     int getCol() const;
     void setPosition(int row, int col);
 
+    // these two functions allow us to add fractional progress to a critter's movement.
+    float getProgress();
+    void addProgress(float cellsMoved);
+
     /**
      * @brief How far along the path this critter is (0 = entry).
      * Towers that prefer "first" targets use the highest index in range.
@@ -74,6 +78,7 @@ private:
     int row;
     int col;
     int pathIndex;
+    float progress = 0.f;
 };
 
 #endif // Critter_h

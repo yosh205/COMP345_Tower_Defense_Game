@@ -3,7 +3,6 @@
  * @brief Implements Critter. Function docs are in Critter.h.
  */
 #include "Critter.h"
-
 #include <algorithm>
 #include <cmath>
 
@@ -28,6 +27,11 @@ float Critter::getBaseSpeed() const { return baseSpeed; }
 
 int Critter::getRow() const { return row; }
 int Critter::getCol() const { return col; }
+
+float Critter::getProgress() { return progress; }
+void Critter::addProgress(float cellsMoved) {
+    this->progress += cellsMoved;
+}
 
 void Critter::setPosition(int row, int col) {
     this->row = row;

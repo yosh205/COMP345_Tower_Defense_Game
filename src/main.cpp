@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "GUI/Hud.h"
 #include "GUI/MapView.h"
@@ -20,7 +21,8 @@
 #include "Tower/DirectDamageTower.h"
 #include "Tower/SlowingTower.h"
 #include "Tower/Tower.h"
-
+#include "Critter/Critter.h"
+#include "Critter/CritterGroupGenerator.h"
 namespace {
 
 enum class AppState { StartMenu, Playing };
@@ -166,7 +168,7 @@ int main() {
                                       static_cast<float>(event.size.height));
                 window.setView(sf::View(visible));
                 layoutMap();
-            }
+            } 
 
             if (state == AppState::StartMenu) {
                 if (event.type == sf::Event::MouseButtonPressed &&
@@ -282,7 +284,7 @@ int main() {
                     : nullptr;
             hud.drawPlayHud(window, sel);
         }
-
+        
         window.display();
     }
     return 0;
