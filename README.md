@@ -27,21 +27,57 @@ cmake --build build --config Release
 
 (`run.ps1` still finds the exe if your generator puts it elsewhere.)
 
-### Linux or WSL
+### Linux or WSL (Ubuntu)
+
+**Option 1 — g++ with the system SFML** (quickest):
 
 ```bash
-sudo apt install libsfml-dev
-g++ -std=c++17 -Wall src/main.cpp src/Map/Map.cpp src/GUI/MapView.cpp -o towerdefense -lsfml-graphics -lsfml-window -lsfml-system
+sudo apt install g++ libsfml-dev
+g++ -std=c++17 -Wall -Isrc $(find src -name '*.cpp') -o towerdefense -lsfml-graphics -lsfml-window -lsfml-system
 ./towerdefense
 ```
 
-Or with CMake (also fetches SFML if needed):
+`$(find src -name '*.cpp')` compiles every source file in `src/`, so the command
+still works when files are added. Run it from the project folder.
+
+**Option 2 — CMake** (same build as Windows; downloads and compiles SFML 2.6.1 the first time):
 
 ```bash
+sudo apt install cmake g++ git libudev-dev libx11-dev libxrandr-dev libxcursor-dev libxi-dev libgl-dev libfreetype-dev
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
+cmake --build build -j
 ./build/bin/towerdefense
 ```
+
+The `apt` packages are needed to compile SFML from source. The first build takes a
+few minutes; after a code change only `cmake --build build -j` is needed.
+
+### Running the tests
+
+`tests/tests.cpp` checks the game rules of the map, towers, critters and waves
+(83 checks). It is a separate program and does not need SFML or a screen.
+
+```bash
+# With CMake (after building as above)
+./build/bin/tests                        # Windows: .\build\bin\Release\tests.exe
+ctest --test-dir build --output-on-failure
+
+# Or with g++ only
+g++ -std=c++17 -Wall -Isrc tests/tests.cpp src/Map/Map.cpp src/Critter/*.cpp src/Tower/*.cpp -o tests_run
+./tests_run
+```
+
+Every check prints `PASS` or `FAIL`; the last line shows how many passed.
+
+### Documentation
+
+The code is documented with Doxygen; this README is the main page.
+
+```bash
+doxygen docs/Doxyfile        # run from the project folder
+```
+
+Then open `docs/html/index.html` in a browser.
 
 ### Controls
 
@@ -49,10 +85,14 @@ Everything is in-game menus (no console prompts):
 
 1. **Start screen** — set rows/columns, optional fullscreen, click **Start Game**
 2. **Shop** (right panel) — click Direct / Area / Slow, then click a green scenery cell to place
-3. **Select tower** — click it on the map to see stats, **Upgrade** / **Sell**
-4. **New map** / **Fullscreen** — sidebar buttons (**F11** also toggles fullscreen)  
+3. **Select tower** — click it on the map to see its range and stats, **Upgrade** / **Sell**
+4. **Start Wave** — sidebar button; critters enter one per second. While a wave runs the
+   sidebar shows how many critters are left; when it ends, the button returns for the next, harder wave.
+5. **New map** / **Fullscreen** — sidebar buttons (**F11** also toggles fullscreen)  
    Right-click cancels shop selection
 
+The sidebar shows your **gold** (it rises when towers kill critters and drops when
+critters reach the exit) and the current **wave**. Towers turn to face their target.
 The map scales to fill the play area (left of the sidebar).
 
 ## Game Rules
@@ -135,9 +175,36 @@ without a window (see `tests/tests.cpp`).
    main.cpp (game loop) ─────────┴── Tower::update() ───┘ (damage / slow)
 ```
 
-## SFML Usage
+## Tools and Libraries
 
-SFML 2.6 (Simple and Fast Multimedia Library)
-Used for the graphical user interface.
+### SFML 2.6 (Simple and Fast Multimedia Library) — graphical user interface
 
-- **Made for 2D games.**
+**Why SFML:**
+- **Made for 2D games.** The game only needs coloured grid cells, simple shapes for towers
+  and critters, mouse clicks and a frame loop. SFML provides these directly
+  (`sf::RectangleShape`, `sf::CircleShape`, `sf::RenderWindow`, events).
+- **Object-oriented C++ API**, which fits the course's focus on C++ classes.
+  Lower-level C libraries such as SDL2 need more setup code for the same drawing.
+- **Cross-platform.** The same code builds on Windows, Linux/WSL and macOS, so every
+  team member and the lab computers can build it.
+- **Lighter than a GUI toolkit such as Qt**, which is designed for forms and widgets
+  rather than real-time games and is much larger to install.
+
+**How it is used:**
+- SFML is only used in `src/GUI/` and `src/main.cpp`. `Map`, `Tower` and `Critter` contain
+  no SFML code: the views (`MapView`, `TowerView`, `CritterView`) read the game objects
+  and draw them. This keeps the game logic independent of the display and testable
+  without a window.
+- Text is drawn with a small built-in bitmap font (`SimpleText`) instead of SFML fonts,
+  which avoids depending on font files and FreeType linking problems on Windows/MinGW.
+- We use version **2.6**, not 3.x: SFML 3 changed the event and drawing API, and 2.6 is
+  the version packaged by Ubuntu 24.04 (`libsfml-dev`).
+
+### CMake — build system
+One build description for Windows (Visual Studio or MinGW) and Linux. It downloads
+SFML 2.6.1 automatically (`FetchContent`) and links it statically, so no DLLs need to
+be copied next to the program on Windows. It also builds the test program.
+
+### Doxygen — documentation
+Generates the documentation from the comments in the code, as required by the
+assignment (`docs/Doxyfile`; see *Documentation* above).
