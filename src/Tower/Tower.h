@@ -63,6 +63,21 @@ public:
     /** @return Critters currently within range (alive only). */
     std::vector<Critter*> detectTargets(const std::vector<Critter*>& critters) const;
 
+    /** 
+     * @return Direction the tower is facing, in degrees: 0 = right (+col),
+     *         90 = down (+row), clockwise as in SFML. Follows the current target.
+     */
+    float getFacingDegrees() const;
+
+    /** @return True only during the update() in which the tower fired a shot. */
+    bool hasJustFired() const;
+
+    /** @return Row of the target at the moment of the last shot (for drawing the projectile). */
+    float getLastTargetRow() const;
+
+    /** @return Column of the target at the moment of the last shot. */
+    float getLastTargetCol() const;
+
 protected:
     /**
      * @param row           Placement row (scenery cell).
@@ -105,6 +120,12 @@ protected:
     int power;
     float fireRate;
     float cooldown;   ///< Seconds until the next shot is allowed.
+
+    float facingDegrees = 0.f;  ///< Current aim; 0 = facing right.
+    bool justFired = false;     ///< Set by update() on the frame a shot is fired.
+    float lastTargetRow = 0.f;  ///< Target position at the last shot.
+    float lastTargetCol = 0.f;
+
 };
 
 #endif // Tower_h
