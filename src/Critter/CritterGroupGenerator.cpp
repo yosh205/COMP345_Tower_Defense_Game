@@ -31,31 +31,49 @@ int CritterGroupGenerator::addCritterToGroup(Critter crit) {
 }
 
 void CritterGroupGenerator::moveAlongPath(std::vector<Position> path, float dt) {
-	if (activeCritters.empty()) {
-		return
+	if (activeCritters.empty() || path.size() < 2) {
+		return;
 	}
-	else {
-		int critterIndexCounter = 0; // keep track of the index of the critter
 
-		for (Critter& critter : activeCritters) {
-			critter.updateEffects(dt);
-			critter.addProgress(critter.getSpeed()*dt);
-			int index = std::min(static_cast<int>(critter.getProgress()), static_cast<int>path.size() - 1);
-			critter.setPathIndex(index);
-			critter.setPosition(path[index].row, path[index].col);
+	for (int i = static_cast<int>(activeCritters.size()) - 1; i >= 0; --i) {
+		Critter& critter = activeCritters[i];
+		critter.updateEffects(dt);
+		critter.addProgress(critter.getSpeed() * dt);
 
-			if (critter.getRow() == path.at(path.size() - 1).row && critter.getCol() == path.at(path.size() - 1).col) {
-				this->rewardCritters();
-				//you should then remove that specific critter from the active critter vector
-			}
-			if (!(critter.isAlive())) {
-				this->deleteCritter(critterIndexCounter);
-			}
+		float progress = critter.getProgress();
+		int currentIndex = static_cast<int>(progress);
+
+		// Check if critter reached or passed the end of the path
+		if (currentIndex >= static_cast<int>(path.size()) - 1) {
+			// Position at final tile exit
+			critter.setPosition(static_cast<float>(path.back().row),
+				static_cast<float>(path.back().col));
+			this->rewardCritters();
+			deleteCritter(i);
+			continue;
+		}
+
+		// --- SMOOTH MOVEMENT INTERPOLATION (LERP) ---
+		float t = progress - static_cast<float>(currentIndex); // Fractional distance (0.0 to 1.0)
+
+		Position currentTile = path[currentIndex];
+		Position nextTile = path[currentIndex + 1];
+
+		// Linearly interpolate row and col between current and next tile
+		float interpolatedRow = currentTile.row + t * (nextTile.row - currentTile.row);
+		float interpolatedCol = currentTile.col + t * (nextTile.col - currentTile.col);
+
+		critter.setPathIndex(currentIndex);
+		critter.setPosition(interpolatedRow, interpolatedCol); // Store as float positions!
+
+		// Delete if critter died
+		if (!critter.isAlive()) {
+			deleteCritter(i);
 		}
 	}
 }
 
-void CritterGroupGenerator::findNextCritter(std::vector<Position> path) {
+void CritterGroupGenerator::findNextCritter(const std::vector<Position> path) {
 
 	if (pendingCritters.empty()) {
 		return;
@@ -76,12 +94,14 @@ int CritterGroupGenerator::rewardCritters() { //placeholder, need to add the ste
 }
 
 int CritterGroupGenerator::deleteCritter(int critterIndex) {
-	activeCritters.erase(critterIndex);
+	if (critterIndex >= 0 && critterIndex < static_cast<int>(activeCritters.size())) {
+		activeCritters.erase(activeCritters.begin() + critterIndex);
+	}
 	//remove critter at critterIndex and reward the player according to this critter's strength
-	return 0;
+	return 0;	
 }
 
 
 int CritterGroupGenerator::activeCrittersLeft() {
-	return activeCritters.empty();
+	return static_cast<int>(activeCritters.size());
 }

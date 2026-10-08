@@ -25,15 +25,15 @@ bool Critter::isAlive() const { return hitPoints > 0; }
 float Critter::getSpeed() const { return baseSpeed * slowFactor; }
 float Critter::getBaseSpeed() const { return baseSpeed; }
 
-int Critter::getRow() const { return row; }
-int Critter::getCol() const { return col; }
+float Critter::getRow() const { return row; }
+float Critter::getCol() const { return col; }
 
 float Critter::getProgress() { return progress; }
 void Critter::addProgress(float cellsMoved) {
     this->progress += cellsMoved;
 }
 
-void Critter::setPosition(int row, int col) {
+void Critter::setPosition(float row, float col) {
     this->row = row;
     this->col = col;
 }

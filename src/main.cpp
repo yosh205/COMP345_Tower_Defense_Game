@@ -15,6 +15,7 @@
 #include "GUI/Hud.h"
 #include "GUI/MapView.h"
 #include "GUI/TowerView.h"
+#include "GUI/CritterView.h"
 #include "Map/Map.h"
 #include "Map/MapGenerator.h"
 #include "Tower/AreaDamageTower.h"
@@ -81,7 +82,14 @@ int main() {
 
     Hud hud;
     TowerView towerView;
+    CritterView critterView;
     AppState state = AppState::StartMenu;
+
+    sf::Clock clock;        //Frame timer
+    float spawnTimer = 0.f;
+    const float kSpawnInterval = 1.0f;
+
+    CritterGroupGenerator wave(1);
 
     Map map(4, 4);
     MapView mapView(40.f);
@@ -131,6 +139,10 @@ int main() {
         selectedTower = -1;
         hud.setGold(500);
         hud.clearShopSelection();
+
+        wave = CritterGroupGenerator(1);
+        spawnTimer = 0.f;
+
         state = AppState::Playing;
         if (hud.wantsFullscreen() != fullscreen) {
             fullscreen = hud.wantsFullscreen();
@@ -146,6 +158,8 @@ int main() {
     };
 
     while (window.isOpen()) {
+        const float dt = clock.restart().asSeconds();
+
         const sf::Vector2i mouse = sf::Mouse::getPosition(window);
         const sf::Vector2f mouseF(static_cast<float>(mouse.x), static_cast<float>(mouse.y));
         const float cellSize = mapView.getCellSize();
@@ -153,6 +167,16 @@ int main() {
         const float oy = mapView.getOriginY();
         const float mapAreaW =
             static_cast<float>(window.getSize().x) - Hud::kSidebarWidth;
+
+        if (state == AppState::Playing) {
+            spawnTimer += dt;
+            if (spawnTimer >= kSpawnInterval) {
+                wave.findNextCritter(map.findPath());
+                spawnTimer = 0.f;
+            }
+
+            wave.moveAlongPath(map.findPath(), dt);
+        }
 
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -269,6 +293,7 @@ int main() {
 
             mapView.draw(window, map);
             towerView.draw(window, towers, cellSize, ox, oy, selectedTower);
+            critterView.draw(window, wave.getActiveCritters(), cellSize, ox, oy);
 
             if (ghostRow >= 0 && map.isInBounds(ghostRow, ghostCol)) {
                 const bool ok = map.canPlaceTower(ghostRow, ghostCol) &&
