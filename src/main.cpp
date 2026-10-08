@@ -89,7 +89,31 @@ int main() {
     float spawnTimer = 0.f;
     const float kSpawnInterval = 1.0f;
 
+    // The current wave. Nothing spawns until the player clicks Start Wave;
+    // waveInProgress is true from then until every critter is killed or escaped.
     CritterGroupGenerator wave(1);
+    int waveNumber = 0;          // 0 = no wave played yet on this map
+    bool waveInProgress = false;
+
+    // Start the next wave: a new group whose critters are stronger and faster
+    // (the generator scales hit points, speed and level with the wave number).
+    auto startWave = [&]() {
+        if (waveInProgress) {
+            return;
+        }
+        ++waveNumber;
+        wave = CritterGroupGenerator(waveNumber);
+        spawnTimer = kSpawnInterval;  // first critter enters right away
+        waveInProgress = true;
+    };
+
+    // Forget any wave on the map (used for a new game or a new map).
+    auto resetWaves = [&]() {
+        wave = CritterGroupGenerator(1);  // replaces the old group; nothing spawns until Start Wave
+        waveNumber = 0;
+        waveInProgress = false;
+        spawnTimer = 0.f;
+    };
 
     Map map(4, 4);
     MapView mapView(40.f);
@@ -140,8 +164,7 @@ int main() {
         hud.setGold(500);
         hud.clearShopSelection();
 
-        wave = CritterGroupGenerator(1);
-        spawnTimer = 0.f;
+        resetWaves();
 
         state = AppState::Playing;
         if (hud.wantsFullscreen() != fullscreen) {
@@ -168,7 +191,8 @@ int main() {
         const float mapAreaW =
             static_cast<float>(window.getSize().x) - Hud::kSidebarWidth;
 
-        if (state == AppState::Playing) {
+        // Critters only spawn, move and get shot while a wave is running.
+        if (state == AppState::Playing && waveInProgress) {
             spawnTimer += dt;
             if (spawnTimer >= kSpawnInterval) {
                 wave.findNextCritter(map.findPath());
@@ -202,6 +226,13 @@ int main() {
             // Dead critters are skipped here and removed by moveAlongPath() next frame.
             for (auto& tower : towers) {
                 tower->update(dt, targets);
+            }
+
+            // --- End of wave ---
+            // Every critter has been killed or has escaped: the Start Wave
+            // button comes back for the next (harder) wave.
+            if (wave.crittersRemaining() == 0) {
+                waveInProgress = false;
             }
         }
 
@@ -262,9 +293,12 @@ int main() {
                     } else if (action == "new_map") {
                         map = generateRandomMap(hud.getMapRows(), hud.getMapCols());
                         towers.clear();
+                        resetWaves();  // old critters would be on the old map's path
                         selectedTower = -1;
                         hud.clearShopSelection();
                         layoutMap();
+                    } else if (action == "start_wave") {
+                        startWave();
                     } else if (action == "toggle_fullscreen") {
                         toggleFullscreen();
                     } else if (action == "buy_direct" || action == "buy_area" ||
@@ -334,6 +368,10 @@ int main() {
                 (selectedTower >= 0)
                     ? towers[static_cast<std::size_t>(selectedTower)].get()
                     : nullptr;
+            // Show the wave number and either the Start Wave button or critters left.
+            hud.setWaveInfo(waveNumber,
+                            waveInProgress ? wave.crittersRemaining() : 0,
+                            waveInProgress);
             hud.drawPlayHud(window, sel);
         }
         

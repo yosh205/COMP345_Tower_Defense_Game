@@ -30,6 +30,12 @@ public:
 	int collectCoinsStolen();
 
 	int activeCrittersLeft();
+
+	/**
+	 * @brief Critters of this wave not yet killed or escaped: those waiting to
+	 * enter plus those on the map. The wave is over when this reaches 0.
+	 */
+	int crittersRemaining() const;
 	const std::vector<Critter>& getActiveCritters() const { return activeCritters; }
 
 	/**

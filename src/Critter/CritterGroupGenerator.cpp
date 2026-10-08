@@ -121,6 +121,10 @@ int CritterGroupGenerator::activeCrittersLeft() {
 	return static_cast<int>(activeCritters.size());
 }
 
+int CritterGroupGenerator::crittersRemaining() const {
+	return static_cast<int>(pendingCritters.size() + activeCritters.size());
+}
+
 std::vector<Critter*> CritterGroupGenerator::getActiveCritterPointers() {
 	std::vector<Critter*> pointers;
 	pointers.reserve(activeCritters.size()); // one slot per critter, no regrowing

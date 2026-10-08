@@ -33,6 +33,12 @@ int Hud::getGold() const { return gold; }
 ShopSelection Hud::getShopSelection() const { return shopSelection; }
 void Hud::clearShopSelection() { shopSelection = ShopSelection::None; }
 
+void Hud::setWaveInfo(int w, int left, bool inProgress) {
+    wave = w;
+    crittersLeft = left;
+    waveInProgress = inProgress;
+}
+
 bool Hud::wantsFullscreen() const { return fullscreenPreferred; }
 void Hud::setWantsFullscreen(bool on) { fullscreenPreferred = on; }
 
@@ -159,6 +165,10 @@ void Hud::drawPlayHud(sf::RenderWindow& window, const Tower* selected) const {
     drawLabel(window, "GOLD", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
     drawLabel(window, "$" + std::to_string(gold), x + 18.f, y + 24.f, 3.f,
               sf::Color(255, 210, 70));
+    // Wave number, to the right of the gold.
+    drawLabel(window, "WAVE", x + 160.f, y, 2.f, sf::Color(160, 175, 195));
+    drawLabel(window, std::to_string(wave), x + 160.f, y + 24.f, 3.f,
+              sf::Color(230, 120, 230));
     y += 70.f;
 
     drawLabel(window, "SHOP", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
@@ -213,6 +223,18 @@ void Hud::drawPlayHud(sf::RenderWindow& window, const Tower* selected) const {
 
     drawLabel(window, "ACTIONS", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
     y += 24.f;
+    if (waveInProgress) {
+        // While a wave runs there is no button (an empty rect cannot be
+        // clicked); show how many critters are still in play instead.
+        startWaveBtn = sf::FloatRect();
+        drawLabel(window, "CRITTERS LEFT: " + std::to_string(crittersLeft),
+                  x + 18.f, y + 12.f, 2.f, sf::Color(230, 120, 230));
+    } else {
+        startWaveBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
+        drawButton(window, startWaveBtn, "START WAVE " + std::to_string(wave + 1),
+                   sf::Color(120, 50, 140));
+    }
+    y += 48.f;
     newMapBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
     drawButton(window, newMapBtn, "NEW MAP", sf::Color(50, 70, 95));
     y += 48.f;
@@ -247,6 +269,9 @@ std::string Hud::handlePlayClick(sf::Vector2f pos, const Tower* selected) {
     }
     if (selected != nullptr && contains(sellBtn, pos)) {
         return "sell";
+    }
+    if (contains(startWaveBtn, pos)) {
+        return "start_wave";
     }
     if (contains(newMapBtn, pos)) {
         return "new_map";

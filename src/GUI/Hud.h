@@ -48,12 +48,20 @@ public:
     ShopSelection getShopSelection() const;
     void clearShopSelection();
 
+    /**
+     * @brief Updates the wave display in the sidebar.
+     * @param wave         Current wave number (0 before the first wave).
+     * @param crittersLeft Critters of the wave not yet killed or escaped.
+     * @param inProgress   True while a wave runs; hides the Start Wave button.
+     */
+    void setWaveInfo(int wave, int crittersLeft, bool inProgress);
+
     void drawPlayHud(sf::RenderWindow& window, const Tower* selected) const;
 
     /**
      * @brief Handles a click inside the sidebar during play.
      * @return Action code: "none", "buy_direct", "buy_area", "buy_slow",
-     *         "upgrade", "sell", "new_map", "toggle_fullscreen".
+     *         "upgrade", "sell", "start_wave", "new_map", "toggle_fullscreen".
      */
     std::string handlePlayClick(sf::Vector2f pos, const Tower* selected);
 
@@ -70,6 +78,9 @@ private:
     int gold = 500;
     ShopSelection shopSelection = ShopSelection::None;
     bool fullscreenPreferred = false;
+    int wave = 0;                 ///< Wave number shown in the sidebar.
+    int crittersLeft = 0;         ///< Critters of the wave still in play.
+    bool waveInProgress = false;  ///< True while a wave runs.
 
     void drawButton(sf::RenderWindow& window, sf::FloatRect rect,
                     const std::string& label, sf::Color fill,
@@ -85,6 +96,7 @@ private:
 
     mutable sf::FloatRect shopDirect, shopArea, shopSlow;
     mutable sf::FloatRect upgradeBtn, sellBtn, newMapBtn, playFullscreenBtn;
+    mutable sf::FloatRect startWaveBtn;
 };
 
 #endif // Hud_h
