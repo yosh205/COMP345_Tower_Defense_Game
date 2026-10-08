@@ -49,3 +49,20 @@ if(MSVC)
 else()
     target_compile_options(towerdefense PRIVATE -Wall -Wextra)
 endif()
+
+# Test cases: a separate program that does not need SFML.
+# Build, then run ./build/bin/tests (or: ctest --test-dir build --output-on-failure).
+add_executable(tests
+    tests/tests.cpp
+    src/Map/Map.cpp
+    src/Critter/Critter.cpp
+    src/Critter/CritterGroupGenerator.cpp
+    src/Tower/Tower.cpp
+    src/Tower/DirectDamageTower.cpp
+    src/Tower/AreaDamageTower.cpp
+    src/Tower/SlowingTower.cpp
+)
+target_include_directories(tests PRIVATE src)
+
+enable_testing()
+add_test(NAME tests COMMAND tests)
