@@ -1,9 +1,9 @@
 /**
  * @file Critter.h
- * @brief Minimal critter for tower targeting, damage, and slow effects.
+ * @brief Declares Critter: an enemy with hit points, speed, level, reward and strength.
  *
- * A fuller wave/movement system belongs to later parts; this is enough for
- * towers to detect range, pick a target, and apply their shot effects.
+ * Critters are created in waves by CritterGroupGenerator, which also moves them
+ * along the path. Towers damage and slow them through takeDamage() and applySlow().
  */
 #ifndef Critter_h
 #define Critter_h
@@ -17,6 +17,10 @@ enum class CritterKind {
 
 /**
  * @brief An enemy that walks the path and can be damaged or slowed by towers.
+ *
+ * Game rules: a critter dies when its hit points reach 0 and then pays its
+ * reward (proportional to its level). If it reaches the exit first, it steals
+ * coins according to its strength.
  */
 class Critter {
 public:
@@ -32,21 +36,33 @@ public:
     Critter(CritterKind kind, int maxHitPoints, float baseSpeed, int row, int col,
             int level = 1);
 
+    /** @return The kind of critter (Normal, Armored or Fast). */
     CritterKind getKind() const;
+    /** @return Hit points left (0 means dead). */
     int getHitPoints() const;
+    /** @return Hit points the critter started with. */
     int getMaxHitPoints() const;
+    /** @return True while the critter has more than 0 hit points. */
     bool isAlive() const;
 
     /** @return Current movement speed (base speed after slow). */
     float getSpeed() const;
+    /** @return Speed in cells per second when not slowed. */
     float getBaseSpeed() const;
 
+    /** @return Current row; fractional while the critter is between two cells. */
     float getRow() const;
+    /** @return Current column; fractional while the critter is between two cells. */
     float getCol() const;
+    /** @brief Places the critter at (row, col) on the map, in cells. */
     void setPosition(float row, float col);
 
-    // these two functions allow us to add fractional progress to a critter's movement.
+    /**
+     * @return Distance travelled along the path, in cells (e.g. 2.5 = halfway
+     *         between the 3rd and 4th path cells). Used for smooth movement.
+     */
     float getProgress();
+    /** @brief Adds cellsMoved to the distance travelled along the path. */
     void addProgress(float cellsMoved);
 
     /**
@@ -54,6 +70,7 @@ public:
      * Towers that prefer "first" targets use the highest index in range.
      */
     int getPathIndex() const;
+    /** @brief Sets the index of the path cell the critter is on (0 = entry). */
     void setPathIndex(int index);
 
     /** @brief Reduces hit points; clamps at 0. */
@@ -94,16 +111,16 @@ public:
     int getCoinsStolen() const;
 
 private:
-    CritterKind kind;
-    int maxHitPoints;
-    int hitPoints;
-    float baseSpeed;
+    CritterKind kind;     ///< Normal, Armored or Fast.
+    int maxHitPoints;     ///< Starting hit points.
+    int hitPoints;        ///< Hit points left; 0 = dead.
+    float baseSpeed;      ///< Cells per second when not slowed.
     float slowFactor;     ///< 1 = normal; < 1 = slowed.
     float slowTimeLeft;   ///< Seconds remaining on the current slow.
-    float row;
-    float col;
-    int pathIndex;
-    float progress = 0.f;
+    float row;            ///< Current row (fractional between cells).
+    float col;            ///< Current column (fractional between cells).
+    int pathIndex;        ///< Index of the path cell the critter is on (0 = entry).
+    float progress = 0.f; ///< Cells travelled along the path.
     int level;     ///< Difficulty level, 1 or higher.
     int reward;    ///< Coins earned when killed (set from level and kind).
     int strength;  ///< Sets the coins stolen at the exit (set from level and kind).

@@ -3,6 +3,7 @@
  * @brief Distinct silhouettes per tower type + selection/range feedback.
  */
 #include "TowerView.h"
+#include <cmath>
 
 namespace {
 
@@ -30,6 +31,8 @@ void TowerView::drawOne(sf::RenderWindow& window, const Tower& tower,
                         bool selected) const {
     const sf::Vector2f c = cellCenter(tower, cellSize, originX, originY);
     const float s = cellSize;
+    const float facing = tower.getFacingDegrees();
+    const float facingRad = facing * 3.14159265f / 180.f;
 
     if (selected) {
         sf::CircleShape range(tower.getRange() * s);
@@ -62,6 +65,7 @@ void TowerView::drawOne(sf::RenderWindow& window, const Tower& tower,
         sf::RectangleShape barrel(sf::Vector2f(s * 0.42f, s * 0.12f));
         barrel.setOrigin(0.f, barrel.getSize().y * 0.5f);
         barrel.setPosition(c);
+        barrel.setRotation(facing);
         barrel.setFillColor(sf::Color(30, 32, 40));
         barrel.setOutlineColor(sf::Color(140, 145, 160));
         barrel.setOutlineThickness(1.f);
@@ -69,7 +73,7 @@ void TowerView::drawOne(sf::RenderWindow& window, const Tower& tower,
 
         sf::CircleShape muzzle(s * 0.07f);
         muzzle.setOrigin(muzzle.getRadius(), muzzle.getRadius());
-        muzzle.setPosition(c.x + s * 0.42f, c.y);
+        muzzle.setPosition(c.x + s * 0.42f * std::cos(facingRad), c.y + s * 0.42f * std::sin(facingRad));
         muzzle.setFillColor(sf::Color(200, 60, 50));
         window.draw(muzzle);
     } else if (type == "Area") {
@@ -88,7 +92,7 @@ void TowerView::drawOne(sf::RenderWindow& window, const Tower& tower,
         window.draw(inner);
 
         for (int i = 0; i < 4; ++i) {
-            const float ang = i * 3.14159265f * 0.5f + 0.4f;
+            const float ang = i * 3.14159265f * 0.5f + 0.4f + facingRad;
             sf::RectangleShape tick(sf::Vector2f(s * 0.18f, s * 0.05f));
             tick.setOrigin(0.f, tick.getSize().y * 0.5f);
             tick.setPosition(c);
@@ -104,6 +108,7 @@ void TowerView::drawOne(sf::RenderWindow& window, const Tower& tower,
         gem.setPoint(2, {0.f, s * 0.32f});
         gem.setPoint(3, {-s * 0.22f, 0.f});
         gem.setPosition(c);
+        gem.setRotation(facing + 90.f);
         gem.setFillColor(sf::Color(90, 190, 240));
         gem.setOutlineThickness(2.f);
         gem.setOutlineColor(sf::Color(220, 245, 255));
@@ -116,6 +121,7 @@ void TowerView::drawOne(sf::RenderWindow& window, const Tower& tower,
         core.setPoint(2, {0.f, s * 0.14f});
         core.setPoint(3, {-s * 0.09f, 0.f});
         core.setPosition(c);
+        core.setRotation(facing + 90.f);
         core.setFillColor(sf::Color(200, 240, 255, 200));
         window.draw(core);
     }
