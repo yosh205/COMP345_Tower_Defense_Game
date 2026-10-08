@@ -176,6 +176,23 @@ int main() {
             }
 
             wave.moveAlongPath(map.findPath(), dt);
+
+            // --- Towers attack critters (Part 2) ---
+            // Get pointers to the critters on the map. Towers need pointers (not
+            // copies) so the damage and slow effects change the real critters.
+            // The list is rebuilt every frame because critters are added and
+            // removed by findNextCritter() and moveAlongPath() above.
+            std::vector<Critter*> targets = wave.getActiveCritterPointers();
+
+            // Tower::update() does the whole attack for one tower:
+            //   1. counts down its cooldown (rate of fire),
+            //   2. detects the living critters within its range,
+            //   3. selects the one furthest along the path,
+            //   4. shoots it (direct damage, area damage, or slow, by tower type).
+            // Dead critters are skipped here and removed by moveAlongPath() next frame.
+            for (auto& tower : towers) {
+                tower->update(dt, targets);
+            }
         }
 
         sf::Event event;

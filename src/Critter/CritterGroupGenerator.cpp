@@ -105,3 +105,15 @@ int CritterGroupGenerator::deleteCritter(int critterIndex) {
 int CritterGroupGenerator::activeCrittersLeft() {
 	return static_cast<int>(activeCritters.size());
 }
+
+std::vector<Critter*> CritterGroupGenerator::getActiveCritterPointers() {
+	std::vector<Critter*> pointers;
+	pointers.reserve(activeCritters.size()); // one slot per critter, no regrowing
+
+	// Take each critter by reference (Critter&, not a copy) so &critter is the
+	// address of the critter inside activeCritters. Towers then damage that one.
+	for (Critter& critter : activeCritters) {
+		pointers.push_back(&critter);
+	}
+	return pointers;
+}

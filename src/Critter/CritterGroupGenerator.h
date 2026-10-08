@@ -18,6 +18,22 @@ public:
 	int activeCrittersLeft();
 	const std::vector<Critter>& getActiveCritters() const { return activeCritters; }
 
+	/**
+	 * @brief Pointers to the critters currently on the map, for towers to target.
+	 *
+	 * Towers take Critter* so their shots (damage, slow) change the critters
+	 * stored in this group. getActiveCritters() cannot be used for that because
+	 * it only gives read-only access.
+	 *
+	 * The pointers point into activeCritters, a std::vector. When critters are
+	 * added or removed (findNextCritter / moveAlongPath) the vector may move its
+	 * elements, which would make old pointers invalid. So call this again every
+	 * frame instead of keeping the list.
+	 *
+	 * @return One pointer per active critter, in the same order as getActiveCritters().
+	 */
+	std::vector<Critter*> getActiveCritterPointers();
+
 
 private:
 	int difficultyLevel; // will be increased by 1 each wave, reaching maximum 3
