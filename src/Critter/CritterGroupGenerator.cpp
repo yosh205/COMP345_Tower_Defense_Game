@@ -1,3 +1,7 @@
+/**
+ * @file CritterGroupGenerator.cpp
+ * @brief Implements CritterGroupGenerator. Function docs are in CritterGroupGenerator.h.
+ */
 #include <string>
 #include <vector>
 #include <queue>

@@ -1,7 +1,10 @@
 /**
-* @file CritterView.cpp
-* @brief Distinct silhouettes per critter type
-*/
+ * @file CritterView.cpp
+ * @brief Implements CritterView: a distinct silhouette per critter kind and a health bar.
+ *
+ * Screen x comes from the critter's column and y from its row (both floats, so
+ * critters move smoothly between cells).
+ */
 #include "CritterView.h"
 #include <algorithm>
 
