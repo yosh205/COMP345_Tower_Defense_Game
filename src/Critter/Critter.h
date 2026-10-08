@@ -38,9 +38,9 @@ public:
     float getSpeed() const;
     float getBaseSpeed() const;
 
-    int getRow() const;
-    int getCol() const;
-    void setPosition(int row, int col);
+    float getRow() const;
+    float getCol() const;
+    void setPosition(float row, float col);
 
     // these two functions allow us to add fractional progress to a critter's movement.
     float getProgress();
@@ -75,8 +75,8 @@ private:
     float baseSpeed;
     float slowFactor;     ///< 1 = normal; < 1 = slowed.
     float slowTimeLeft;   ///< Seconds remaining on the current slow.
-    int row;
-    int col;
+    float row;
+    float col;
     int pathIndex;
     float progress = 0.f;
 };

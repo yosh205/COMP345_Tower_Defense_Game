@@ -32,7 +32,9 @@ add_executable(towerdefense
     src/GUI/TowerView.cpp
     src/GUI/Hud.cpp
     src/GUI/SimpleText.cpp
+    src/GUI/CritterView.cpp
     src/Critter/Critter.cpp
+    src/Critter/CritterGroupGenerator.cpp
     src/Tower/Tower.cpp
     src/Tower/DirectDamageTower.cpp
     src/Tower/AreaDamageTower.cpp

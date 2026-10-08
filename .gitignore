@@ -67,3 +67,14 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+# Visual Studio temporary & cache files
+.vs/
+*.user
+*.suo
+bin/
+obj/
+x64/
+x86/
+Debug/
+Release/
