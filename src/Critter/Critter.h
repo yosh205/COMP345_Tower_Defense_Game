@@ -26,8 +26,11 @@ public:
      * @param baseSpeed Cells per second while not slowed.
      * @param row       Starting row (usually the entry).
      * @param col       Starting column (usually the entry).
+     * @param level     Difficulty level, 1 or higher (values below 1 become 1).
+     *                  The reward and strength are calculated from it.
      */
-    Critter(CritterKind kind, int maxHitPoints, float baseSpeed, int row, int col);
+    Critter(CritterKind kind, int maxHitPoints, float baseSpeed, int row, int col,
+            int level = 1);
 
     CritterKind getKind() const;
     int getHitPoints() const;
@@ -68,6 +71,28 @@ public:
     /** @brief Euclidean distance in cells from this critter to (row, col). */
     float distanceTo(int row, int col) const;
 
+    /** @return Difficulty level of this critter (1 = easiest). */
+    int getLevel() const;
+
+    /**
+     * @return Coins the player earns for killing this critter.
+     * Game rule: the reward is proportional to the level (5 coins per level),
+     * plus 50% for Armored critters because they are harder to kill.
+     */
+    int getReward() const;
+
+    /**
+     * @return How dangerous this critter is when it reaches the exit.
+     * Equal to its level, plus 1 for Fast critters because they are harder to stop.
+     */
+    int getStrength() const;
+
+    /**
+     * @return Coins stolen from the player when this critter reaches the exit.
+     * Game rule: determined by strength (3 coins per point of strength).
+     */
+    int getCoinsStolen() const;
+
 private:
     CritterKind kind;
     int maxHitPoints;
@@ -79,6 +104,9 @@ private:
     float col;
     int pathIndex;
     float progress = 0.f;
+    int level;     ///< Difficulty level, 1 or higher.
+    int reward;    ///< Coins earned when killed (set from level and kind).
+    int strength;  ///< Sets the coins stolen at the exit (set from level and kind).
 };
 
 #endif // Critter_h

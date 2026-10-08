@@ -6,7 +6,8 @@
 #include <algorithm>
 #include <cmath>
 
-Critter::Critter(CritterKind kind, int maxHitPoints, float baseSpeed, int row, int col)
+Critter::Critter(CritterKind kind, int maxHitPoints, float baseSpeed, int row, int col,
+                 int level)
     : kind(kind),
       maxHitPoints(maxHitPoints),
       hitPoints(maxHitPoints),
@@ -15,7 +16,22 @@ Critter::Critter(CritterKind kind, int maxHitPoints, float baseSpeed, int row, i
       slowTimeLeft(0.f),
       row(row),
       col(col),
-      pathIndex(0) {}
+      pathIndex(0),
+      level(std::max(1, level)),
+      reward(0),
+      strength(0) {
+    // Reward is proportional to level; armored critters are worth 50% more.
+    reward = 5 * this->level;
+    if (kind == CritterKind::Armored) {
+        reward += reward / 2;
+    }
+
+    // Strength grows with level; fast critters are one point stronger.
+    strength = this->level;
+    if (kind == CritterKind::Fast) {
+        strength += 1;
+    }
+}
 
 CritterKind Critter::getKind() const { return kind; }
 int Critter::getHitPoints() const { return hitPoints; }
@@ -76,3 +92,8 @@ float Critter::distanceTo(int row, int col) const {
     const float dc = static_cast<float>(this->col - col);
     return std::sqrt(dr * dr + dc * dc);
 }
+
+int Critter::getLevel() const { return level; }
+int Critter::getReward() const { return reward; }
+int Critter::getStrength() const { return strength; }
+int Critter::getCoinsStolen() const { return 3 * strength; }

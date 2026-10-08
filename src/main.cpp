@@ -177,6 +177,16 @@ int main() {
 
             wave.moveAlongPath(map.findPath(), dt);
 
+            // --- Coins (Part 3) ---
+            // moveAlongPath() just removed critters that were killed (reward) or
+            // reached the exit (theft). Apply both to the player's gold.
+            // Gold never drops below 0.
+            const int earned = wave.collectCoinsEarned();
+            const int stolen = wave.collectCoinsStolen();
+            if (earned != 0 || stolen != 0) {
+                hud.setGold(std::max(0, hud.getGold() + earned - stolen));
+            }
+
             // --- Towers attack critters (Part 2) ---
             // Get pointers to the critters on the map. Towers need pointers (not
             // copies) so the damage and slow effects change the real critters.

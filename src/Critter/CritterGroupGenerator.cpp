@@ -7,19 +7,21 @@
 #include <iostream>
 
 CritterGroupGenerator::CritterGroupGenerator(int waveNb) { // for now, hardcoded to always generate 20 critters. Can be refined to have a percentage-based implementation
+	// Every critter's level is the wave number, so its reward and strength
+	// (calculated by Critter from the level) grow with each wave.
 	//Normal Critters
-	for (int i = 0; i < 10; i++) { 
-		Critter newCritter(CritterKind::Normal, static_cast<int>(100.f*(1.f+(waveNb/10.0))), 0.4+(0.1*waveNb), 0, 0);
+	for (int i = 0; i < 10; i++) {
+		Critter newCritter(CritterKind::Normal, static_cast<int>(100.f*(1.f+(waveNb/10.0))), 0.4+(0.1*waveNb), 0, 0, waveNb);
 		addCritterToGroup(newCritter);
 	}
 	//Armored Critters
 	for (int i = 0; i < 5; i++) {
-		Critter newCritter(CritterKind::Armored, static_cast<int>(130.f * (1.f + (waveNb / 10.0))), 0.2 + (0.1 * waveNb), 0, 0);
+		Critter newCritter(CritterKind::Armored, static_cast<int>(130.f * (1.f + (waveNb / 10.0))), 0.2 + (0.1 * waveNb), 0, 0, waveNb);
 		addCritterToGroup(newCritter);
 	}
 	//Fast Critters
 	for (int i = 0; i < 5; i++) {
-		Critter newCritter(CritterKind::Fast, static_cast<int>(80.f * (1.f + (waveNb / 10.0))), 0.8 + (0.1 * waveNb), 0, 0);
+		Critter newCritter(CritterKind::Fast, static_cast<int>(80.f * (1.f + (waveNb / 10.0))), 0.8 + (0.1 * waveNb), 0, 0, waveNb);
 		addCritterToGroup(newCritter);
 	}
 	//create a group of critters, how do we determine the amount/kind of critters?
@@ -37,6 +39,15 @@ void CritterGroupGenerator::moveAlongPath(std::vector<Position> path, float dt) 
 
 	for (int i = static_cast<int>(activeCritters.size()) - 1; i >= 0; --i) {
 		Critter& critter = activeCritters[i];
+
+		// A critter killed by a tower (last frame) pays its reward and is removed
+		// BEFORE it moves, so a dead critter can never walk onto the exit and steal.
+		if (!critter.isAlive()) {
+			coinsEarned += critter.getReward();
+			deleteCritter(i);
+			continue;
+		}
+
 		critter.updateEffects(dt);
 		critter.addProgress(critter.getSpeed() * dt);
 
@@ -48,7 +59,8 @@ void CritterGroupGenerator::moveAlongPath(std::vector<Position> path, float dt) 
 			// Position at final tile exit
 			critter.setPosition(static_cast<float>(path.back().row),
 				static_cast<float>(path.back().col));
-			this->rewardCritters();
+			// It got through: it steals coins based on its strength.
+			coinsStolen += critter.getCoinsStolen();
 			deleteCritter(i);
 			continue;
 		}
@@ -65,11 +77,6 @@ void CritterGroupGenerator::moveAlongPath(std::vector<Position> path, float dt) 
 
 		critter.setPathIndex(currentIndex);
 		critter.setPosition(interpolatedRow, interpolatedCol); // Store as float positions!
-
-		// Delete if critter died
-		if (!critter.isAlive()) {
-			deleteCritter(i);
-		}
 	}
 }
 
@@ -87,18 +94,26 @@ void CritterGroupGenerator::findNextCritter(const std::vector<Position> path) {
 	}
 }
 
-int CritterGroupGenerator::rewardCritters() { //placeholder, need to add the stealing from player + proportional to strenght aspect
-	stolenPoints += 10;
-	return stolenPoints;
-	//you should then remove that specific critter from the active critter vector
+int CritterGroupGenerator::collectCoinsEarned() {
+	// Hand over the total since the last call, then start counting again from 0.
+	const int earned = coinsEarned;
+	coinsEarned = 0;
+	return earned;
+}
+
+int CritterGroupGenerator::collectCoinsStolen() {
+	const int stolen = coinsStolen;
+	coinsStolen = 0;
+	return stolen;
 }
 
 int CritterGroupGenerator::deleteCritter(int critterIndex) {
+	// Only removes the critter. The reward / theft is counted by moveAlongPath()
+	// before it calls this.
 	if (critterIndex >= 0 && critterIndex < static_cast<int>(activeCritters.size())) {
 		activeCritters.erase(activeCritters.begin() + critterIndex);
 	}
-	//remove critter at critterIndex and reward the player according to this critter's strength
-	return 0;	
+	return 0;
 }
 
 
