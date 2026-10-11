@@ -14,6 +14,7 @@
 #include "Critter/Critter.h"
 #include "Critter/CritterGroupGenerator.h"
 #include "Map/Map.h"
+#include "Map/MapExamples.h"
 #include "Tower/AreaDamageTower.h"
 #include "Tower/DirectDamageTower.h"
 #include "Tower/SlowingTower.h"
@@ -137,6 +138,19 @@ void testMapTowerPlacement() {
     CHECK(!map.canPlaceTower(9, 9));  // outside the map
     CHECK(map.isWalkable(1, 0) && map.isWalkable(1, 2) && map.isWalkable(1, 4));
     CHECK(!map.isWalkable(0, 0));
+}
+
+void testMapExamples() {
+    std::cout << "\n[Map] The driver's demo maps: only the first is valid, each other breaks one rule\n";
+    const std::vector<MapExample> examples = makeMapExamples();
+    CHECK(examples.size() == 7);
+    CHECK(examples.front().map.isValid());
+
+    bool othersInvalid = true;
+    for (std::size_t i = 1; i < examples.size(); ++i) {
+        othersInvalid = othersInvalid && !examples[i].map.isValid();
+    }
+    CHECK(othersInvalid);
 }
 
 // ------------------------------------------------------------- Part 2: Towers
@@ -395,6 +409,7 @@ int main() {
     testMapValidity();
     testMapPath();
     testMapTowerPlacement();
+    testMapExamples();
 
     testTowerLevels();
     testTowerSelling();

@@ -54,7 +54,11 @@ public:
     float getRow() const;
     /** @return Current column; fractional while the critter is between two cells. */
     float getCol() const;
-    /** @brief Places the critter at (row, col) on the map, in cells. */
+    /**
+     * @brief Places the critter at (row, col) on the map, in cells.
+     * @param row Row (may be fractional between two cells).
+     * @param col Column (may be fractional between two cells).
+     */
     void setPosition(float row, float col);
 
     /**
@@ -62,30 +66,50 @@ public:
      *         between the 3rd and 4th path cells). Used for smooth movement.
      */
     float getProgress();
-    /** @brief Adds cellsMoved to the distance travelled along the path. */
+    /**
+     * @brief Adds cellsMoved to the distance travelled along the path.
+     * @param cellsMoved Distance moved this frame, in cells.
+     */
     void addProgress(float cellsMoved);
 
     /**
      * @brief How far along the path this critter is (0 = entry).
      * Towers that prefer "first" targets use the highest index in range.
+     * @return Index of the path cell the critter is on.
      */
     int getPathIndex() const;
-    /** @brief Sets the index of the path cell the critter is on (0 = entry). */
+    /**
+     * @brief Sets the index of the path cell the critter is on (0 = entry).
+     * @param index Index into the path from Map::findPath().
+     */
     void setPathIndex(int index);
 
-    /** @brief Reduces hit points; clamps at 0. */
+    /**
+     * @brief Reduces hit points; clamps at 0.
+     * @param amount Damage to deal; 0 or less does nothing.
+     */
     void takeDamage(int amount);
 
     /**
      * @brief Multiplies speed by factor for durationSeconds.
      * Stronger slows (lower factor) replace weaker ones; durations refresh.
+     * @param factor          Speed multiplier, between 0 and 1 (e.g. 0.6 = 60% speed).
+     * @param durationSeconds How long the slow lasts, in seconds.
      */
     void applySlow(float factor, float durationSeconds);
 
-    /** @brief Advances slow timers. Call once per frame with frame dt. */
+    /**
+     * @brief Advances slow timers. Call once per frame with frame dt.
+     * @param dt Seconds since the last frame.
+     */
     void updateEffects(float dt);
 
-    /** @brief Euclidean distance in cells from this critter to (row, col). */
+    /**
+     * @brief Euclidean distance in cells from this critter to (row, col).
+     * @param row Row of the other position (e.g. a tower's cell).
+     * @param col Column of the other position.
+     * @return Straight-line distance, in cells.
+     */
     float distanceTo(int row, int col) const;
 
     /** @return Difficulty level of this critter (1 = easiest). */

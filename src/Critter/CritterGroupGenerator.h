@@ -68,6 +68,7 @@ public:
 	 * @brief Coins earned from critters killed since the last call, then resets to 0.
 	 * Game rule: each killed critter gives Critter::getReward() coins (proportional to its level).
 	 * Call once per frame and add the result to the player's gold.
+	 * @return Coins earned since the last call.
 	 */
 	int collectCoinsEarned();
 
@@ -75,6 +76,7 @@ public:
 	 * @brief Coins stolen by critters that reached the exit since the last call, then resets to 0.
 	 * Game rule: each escaped critter steals Critter::getCoinsStolen() coins (based on its strength).
 	 * Call once per frame and subtract the result from the player's gold.
+	 * @return Coins stolen since the last call.
 	 */
 	int collectCoinsStolen();
 
@@ -84,6 +86,7 @@ public:
 	/**
 	 * @brief Critters of this wave not yet killed or escaped: those waiting to
 	 * enter plus those on the map. The wave is over when this reaches 0.
+	 * @return Number of critters still in play in this wave.
 	 */
 	int crittersRemaining() const;
 
@@ -114,6 +117,7 @@ private:
 
 	/**
 	 * @brief Adds a critter to the end of the waiting queue.
+	 * @param crit The critter to add (copied into the queue).
 	 * @return Always 0.
 	 */
 	int addCritterToGroup(Critter crit);

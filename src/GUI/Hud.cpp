@@ -81,8 +81,8 @@ void Hud::drawStartMenu(sf::RenderWindow& window) const {
     bg.setFillColor(sf::Color(18, 24, 32));
     window.draw(bg);
 
-    sf::RectangleShape panel(sf::Vector2f(480.f, 420.f));
-    panel.setPosition((w - 480.f) * 0.5f, (h - 420.f) * 0.5f);
+    sf::RectangleShape panel(sf::Vector2f(480.f, 480.f));
+    panel.setPosition((w - 480.f) * 0.5f, (h - 480.f) * 0.5f);
     panel.setFillColor(sf::Color(28, 38, 52));
     panel.setOutlineThickness(2.f);
     panel.setOutlineColor(sf::Color(70, 110, 150));
@@ -120,6 +120,10 @@ void Hud::drawStartMenu(sf::RenderWindow& window) const {
 
     startBtn = makeRect(px + 90.f, py + 340.f, 300.f, 52.f);
     drawButton(window, startBtn, "START GAME", sf::Color(40, 130, 90));
+
+    // Opens the screen that shows which maps Map::isValid() accepts and rejects.
+    mapDemoBtn = makeRect(px + 90.f, py + 410.f, 300.f, 44.f);
+    drawButton(window, mapDemoBtn, "MAP RULES DEMO", sf::Color(50, 70, 95));
 }
 
 bool Hud::handleStartClick(sf::Vector2f pos) {
@@ -278,6 +282,86 @@ std::string Hud::handlePlayClick(sf::Vector2f pos, const Tower* selected) {
     }
     if (contains(playFullscreenBtn, pos)) {
         return "toggle_fullscreen";
+    }
+    return "none";
+}
+
+bool Hud::clickedMapDemo(sf::Vector2f pos) const {
+    return contains(mapDemoBtn, pos);
+}
+
+void Hud::drawMapDemo(sf::RenderWindow& window, const std::string& name,
+                      const std::string& rule, bool valid, int index, int count) const {
+    const float w = static_cast<float>(window.getSize().x);
+    const float h = static_cast<float>(window.getSize().y);
+    const float x = w - kSidebarWidth;
+
+    // Same sidebar background as during play.
+    sf::RectangleShape side(sf::Vector2f(kSidebarWidth, h));
+    side.setPosition(x, 0.f);
+    side.setFillColor(sf::Color(22, 28, 38));
+    window.draw(side);
+
+    sf::RectangleShape div(sf::Vector2f(2.f, h));
+    div.setPosition(x, 0.f);
+    div.setFillColor(sf::Color(55, 75, 100));
+    window.draw(div);
+
+    float y = 18.f;
+    drawLabel(window, "MAP RULES DEMO", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
+    y += 26.f;
+    drawLabel(window, "EXAMPLE " + std::to_string(index + 1) + "/" + std::to_string(count),
+              x + 18.f, y, 1.6f, sf::Color(120, 140, 160));
+    y += 34.f;
+
+    drawLabel(window, name, x + 18.f, y, 2.5f, sf::Color::White);
+    y += 40.f;
+
+    // The result comes straight from Map::isValid().
+    drawLabel(window, "MAP::ISVALID():", x + 18.f, y, 1.6f, sf::Color(160, 175, 195));
+    y += 20.f;
+    drawLabel(window, valid ? "VALID" : "INVALID", x + 18.f, y, 3.f,
+              valid ? sf::Color(80, 210, 110) : sf::Color(235, 80, 70));
+    y += 44.f;
+
+    // The rule, one line per '\n'.
+    drawLabel(window, "RULE:", x + 18.f, y, 1.6f, sf::Color(160, 175, 195));
+    y += 20.f;
+    std::size_t start = 0;
+    while (start <= rule.size()) {
+        const std::size_t end = rule.find('\n', start);
+        const std::string line = rule.substr(start, end == std::string::npos ? std::string::npos
+                                                                              : end - start);
+        drawLabel(window, line, x + 18.f, y, 1.6f, sf::Color(220, 225, 235));
+        y += 18.f;
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
+    }
+    y += 24.f;
+
+    const float half = (kSidebarWidth - 28.f - 8.f) * 0.5f;
+    demoPrevBtn = makeRect(x + 14.f, y, half, 40.f);
+    drawButton(window, demoPrevBtn, "PREV", sf::Color(50, 70, 95));
+    demoNextBtn = makeRect(x + 14.f + half + 8.f, y, half, 40.f);
+    drawButton(window, demoNextBtn, "NEXT", sf::Color(50, 70, 95));
+    y += 48.f;
+    demoBackBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
+    drawButton(window, demoBackBtn, "BACK TO MENU", sf::Color(120, 50, 140));
+    y += 54.f;
+    drawLabel(window, "OR ARROW KEYS / ESC", x + 18.f, y, 1.6f, sf::Color(120, 140, 160));
+}
+
+std::string Hud::handleMapDemoClick(sf::Vector2f pos) const {
+    if (contains(demoPrevBtn, pos)) {
+        return "prev";
+    }
+    if (contains(demoNextBtn, pos)) {
+        return "next";
+    }
+    if (contains(demoBackBtn, pos)) {
+        return "back";
     }
     return "none";
 }

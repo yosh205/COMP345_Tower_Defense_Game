@@ -28,6 +28,7 @@ add_executable(towerdefense
     src/main.cpp
     src/Map/Map.cpp
     src/Map/MapGenerator.cpp
+    src/Map/MapExamples.cpp
     src/GUI/MapView.cpp
     src/GUI/TowerView.cpp
     src/GUI/Hud.cpp
@@ -55,6 +56,7 @@ endif()
 add_executable(tests
     tests/tests.cpp
     src/Map/Map.cpp
+    src/Map/MapExamples.cpp
     src/Critter/Critter.cpp
     src/Critter/CritterGroupGenerator.cpp
     src/Tower/Tower.cpp
