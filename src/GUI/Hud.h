@@ -59,6 +59,34 @@ public:
      */
     bool handleStartClick(sf::Vector2f pos);
 
+    /**
+     * @brief Checks whether a start-menu click hit the Map Rules Demo button.
+     * @param pos Mouse position in window pixels.
+     * @return true if the player clicked Map Rules Demo.
+     */
+    bool clickedMapDemo(sf::Vector2f pos) const;
+
+    // --- Map rules demo ---
+    /**
+     * @brief Draws the demo sidebar: the example's name, the result of
+     * Map::isValid() (VALID / INVALID), the rule it shows, and Prev / Next / Back buttons.
+     * @param window The window to draw into.
+     * @param name   Short name of the example map.
+     * @param rule   The map rule the example shows (lines separated by '\n').
+     * @param valid  Result of Map::isValid() for the example map.
+     * @param index  Position of the example in the list (0 = first).
+     * @param count  Number of examples.
+     */
+    void drawMapDemo(sf::RenderWindow& window, const std::string& name,
+                     const std::string& rule, bool valid, int index, int count) const;
+
+    /**
+     * @brief Handles a click in the demo sidebar.
+     * @param pos Mouse position in window pixels.
+     * @return "prev", "next", "back" or "none".
+     */
+    std::string handleMapDemoClick(sf::Vector2f pos) const;
+
     // --- Play HUD ---
     /**
      * @brief Sets the player's gold shown in the sidebar.
@@ -154,6 +182,11 @@ private:
     mutable sf::FloatRect colsMinus;          ///< Start menu: columns "-" button.
     mutable sf::FloatRect colsPlus;           ///< Start menu: columns "+" button.
     mutable sf::FloatRect fullscreenBtn;      ///< Start menu: fullscreen on/off button.
+    mutable sf::FloatRect mapDemoBtn;         ///< Start menu: Map Rules Demo button.
+
+    mutable sf::FloatRect demoPrevBtn;        ///< Map demo: previous example.
+    mutable sf::FloatRect demoNextBtn;        ///< Map demo: next example.
+    mutable sf::FloatRect demoBackBtn;        ///< Map demo: back to the start menu.
 
     mutable sf::FloatRect shopDirect;         ///< Sidebar: buy Direct tower.
     mutable sf::FloatRect shopArea;           ///< Sidebar: buy Area tower.

@@ -17,6 +17,7 @@
 #include "GUI/TowerView.h"
 #include "GUI/CritterView.h"
 #include "Map/Map.h"
+#include "Map/MapExamples.h"
 #include "Map/MapGenerator.h"
 #include "Tower/AreaDamageTower.h"
 #include "Tower/DirectDamageTower.h"
@@ -26,7 +27,7 @@
 #include "Critter/CritterGroupGenerator.h"
 namespace {
 
-enum class AppState { StartMenu, Playing };
+enum class AppState { StartMenu, MapDemo, Playing };
 
 bool isOccupied(const std::vector<std::unique_ptr<Tower>>& towers, int row, int col) {
     for (const auto& t : towers) {
@@ -67,6 +68,18 @@ std::unique_ptr<Tower> makeTower(ShopSelection sel, int row, int col) {
         case ShopSelection::Area:   return std::make_unique<AreaDamageTower>(row, col);
         case ShopSelection::Slow:   return std::make_unique<SlowingTower>(row, col);
         default: return nullptr;
+    }
+}
+
+/**
+ * @brief Prints every example map and its Map::isValid() result to the console.
+ * @param examples The maps shown on the Map Rules Demo screen.
+ */
+void printMapExamples(const std::vector<MapExample>& examples) {
+    std::cout << "Map rules demo (Map::isValid()):\n";
+    for (const MapExample& example : examples) {
+        std::cout << "  " << example.name << ": "
+                  << (example.map.isValid() ? "VALID" : "INVALID") << "\n";
     }
 }
 
@@ -125,6 +138,12 @@ int main() {
 
     Map map(4, 4);
     MapView mapView(40.f);
+
+    // Map rules demo (Part 1): hand-built maps showing what Map::isValid()
+    // accepts and rejects. Opened from the start menu.
+    const std::vector<MapExample> mapExamples = makeMapExamples();
+    std::size_t exampleIndex = 0;
+    MapView exampleView(40.f);
     std::vector<std::unique_ptr<Tower>> towers;
     int selectedTower = -1;
     int ghostRow = -1;
@@ -264,6 +283,12 @@ int main() {
                 if (event.type == sf::Event::MouseButtonPressed &&
                     event.mouseButton.button == sf::Mouse::Left) {
                     // Start-menu fullscreen toggle may change preference only.
+                    if (hud.clickedMapDemo(mouseF)) {
+                        state = AppState::MapDemo;
+                        exampleIndex = 0;
+                        printMapExamples(mapExamples);
+                        continue;
+                    }
                     const bool wasFs = hud.wantsFullscreen();
                     if (hud.handleStartClick(mouseF)) {
                         beginPlay();
@@ -272,6 +297,29 @@ int main() {
                         fullscreen = hud.wantsFullscreen();
                         applyDisplayMode();
                     }
+                }
+                continue;
+            }
+
+            if (state == AppState::MapDemo) {
+                // Sidebar buttons, or arrow keys / Esc, browse the example maps.
+                std::string action = "none";
+                if (event.type == sf::Event::MouseButtonPressed &&
+                    event.mouseButton.button == sf::Mouse::Left) {
+                    action = hud.handleMapDemoClick(mouseF);
+                } else if (event.type == sf::Event::KeyPressed) {
+                    if (event.key.code == sf::Keyboard::Left) action = "prev";
+                    if (event.key.code == sf::Keyboard::Right) action = "next";
+                    if (event.key.code == sf::Keyboard::Escape) action = "back";
+                }
+
+                const std::size_t count = mapExamples.size();
+                if (action == "next") {
+                    exampleIndex = (exampleIndex + 1) % count;
+                } else if (action == "prev") {
+                    exampleIndex = (exampleIndex + count - 1) % count;
+                } else if (action == "back") {
+                    state = AppState::StartMenu;
                 }
                 continue;
             }
@@ -354,6 +402,21 @@ int main() {
 
         if (state == AppState::StartMenu) {
             hud.drawStartMenu(window);
+        } else if (state == AppState::MapDemo) {
+            // Draw the current example map centred in the area left of the
+            // sidebar, with its isValid() result and rule in the sidebar.
+            const MapExample& example = mapExamples[exampleIndex];
+            const float areaH = static_cast<float>(window.getSize().y);
+            const float rows = static_cast<float>(example.map.getLength());
+            const float cols = static_cast<float>(example.map.getWidth());
+            const float cell = 0.8f * std::min(mapAreaW / cols, areaH / rows);
+            exampleView.setCellSize(cell);
+            exampleView.setOrigin((mapAreaW - cell * cols) * 0.5f,
+                                  (areaH - cell * rows) * 0.5f);
+            exampleView.draw(window, example.map);
+            hud.drawMapDemo(window, example.name, example.rule, example.map.isValid(),
+                            static_cast<int>(exampleIndex),
+                            static_cast<int>(mapExamples.size()));
         } else {
             // Dim the unused letterbox around the map.
             sf::RectangleShape mapBg(sf::Vector2f(mapAreaW, static_cast<float>(window.getSize().y)));

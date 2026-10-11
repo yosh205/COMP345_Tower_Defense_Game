@@ -55,7 +55,7 @@ few minutes; after a code change only `cmake --build build -j` is needed.
 ### Running the tests
 
 `tests/tests.cpp` checks the game rules of the map, towers, critters and waves
-(83 checks). It is a separate program and does not need SFML or a screen.
+(86 checks). It is a separate program and does not need SFML or a screen.
 
 ```bash
 # With CMake (after building as above)
@@ -63,7 +63,7 @@ few minutes; after a code change only `cmake --build build -j` is needed.
 ctest --test-dir build --output-on-failure
 
 # Or with g++ only
-g++ -std=c++17 -Wall -Isrc tests/tests.cpp src/Map/Map.cpp src/Critter/*.cpp src/Tower/*.cpp -o tests_run
+g++ -std=c++17 -Wall -Isrc tests/tests.cpp src/Map/*.cpp src/Critter/*.cpp src/Tower/*.cpp -o tests_run
 ./tests_run
 ```
 
@@ -83,7 +83,9 @@ Then open `docs/html/index.html` in a browser.
 
 Everything is in-game menus (no console prompts):
 
-1. **Start screen** — set rows/columns, optional fullscreen, click **Start Game**
+1. **Start screen** — set rows/columns, optional fullscreen, click **Start Game**.
+   **Map Rules Demo** shows seven hand-built maps (one valid, six that each break one map
+   rule) with the result of `Map::isValid()`; use Prev/Next or the arrow keys, Esc to go back.
 2. **Shop** (right panel) — click Direct / Area / Slow, then click a green scenery cell to place
 3. **Select tower** — click it on the map to see its range and stats, **Upgrade** / **Sell**
 4. **Start Wave** — sidebar button; critters enter one per second. While a wave runs the
@@ -159,7 +161,7 @@ without a window (see `tests/tests.cpp`).
 
 | Folder | Classes | Responsibility |
 |---|---|---|
-| `src/Map` | `Map`, `generateRandomMap()` | Grid of cells, setters, validity check, entry-to-exit path (breadth-first search) |
+| `src/Map` | `Map`, `generateRandomMap()`, `makeMapExamples()` | Grid of cells, setters, validity check, entry-to-exit path (breadth-first search); example valid/invalid maps for the demo |
 | `src/Tower` | `Tower` (abstract), `DirectDamageTower`, `AreaDamageTower`, `SlowingTower` | Costs, levels, upgrade/sell, detect → select → shoot. Subclasses only change the shot's effect (`fireAt()`) |
 | `src/Critter` | `Critter`, `CritterGroupGenerator` | Critter stats and effects; creating a wave, spawning, moving along the path, rewards and theft |
 | `src/GUI` | `MapView`, `TowerView`, `CritterView`, `Hud` | Drawing with SFML and the menus/sidebar. Views only read the game objects |
