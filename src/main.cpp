@@ -72,6 +72,14 @@ std::unique_ptr<Tower> makeTower(ShopSelection sel, int row, int col) {
 
 } // namespace
 
+/**
+ * @brief Driver: opens the window and runs the game loop.
+ *
+ * Shows the start menu, then each frame while a wave runs: spawn the next critter,
+ * move critters (paying rewards / applying theft), let towers shoot, handle
+ * clicks in the shop and on the map, and draw everything.
+ * @return 0 when the window is closed.
+ */
 int main() {
     const sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
     const sf::VideoMode windowed(1280, 720);

@@ -35,10 +35,20 @@ public:
 		float originX,
 		float originY) const;
 private:
-	/** @brief Draws one critter (skipped if dead) and its health bar. */
+	/**
+	 * @brief Draws one critter (skipped if dead) and its health bar.
+	 * @param window   The window to draw into.
+	 * @param critter  The critter to draw.
+	 * @param cellSize Size of one map cell, in pixels.
+	 * @param originX  Left edge of the map, in pixels.
+	 * @param originY  Top edge of the map, in pixels.
+	 */
 	void drawOne(sf::RenderWindow& window, const Critter& critter,
 				float cellSize, float originX, float originY) const;
-	/** @return The fill colour used for a critter kind. */
+	/**
+	 * @param kind A critter kind.
+	 * @return The fill colour used for a critter kind.
+	 */
 	sf::Color getColorForKind(CritterKind kind) const;
 };
 

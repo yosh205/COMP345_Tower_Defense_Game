@@ -17,17 +17,31 @@
  *
  * Buying cost, refund value, range, power and rate of fire scale with level.
  * update() handles cooldown, finds targets in range, selects one, and shoots.
+ *
+ * Game rules:
+ * - A tower is bought at level 1 for getBuyCost() and can only stand on a scenery cell.
+ * - Each upgrade costs getUpgradeCost() and raises power by 25%, range by 15% and
+ *   rate of fire by 10% (per level above 1), up to getMaxLevel().
+ * - Selling refunds getRefundValue(): 70% of everything spent on the tower.
+ * - When operating, the tower detects critters in range, selects the one furthest
+ *   along the path, and shoots it. The effect of the shot depends on the subclass
+ *   (DirectDamageTower, AreaDamageTower, SlowingTower).
  */
 class Tower {
 public:
+    /** @brief Virtual so towers can be deleted through a Tower pointer. */
     virtual ~Tower() = default;
 
     /** @return Short name for UI / logging (e.g. "Direct", "Area", "Slow"). */
     virtual std::string getTypeName() const = 0;
 
+    /** @return Row of the map cell the tower stands on. */
     int getRow() const;
+    /** @return Column of the map cell the tower stands on. */
     int getCol() const;
+    /** @return Current level, from 1 to getMaxLevel(). */
     int getLevel() const;
+    /** @return Highest level this tower can be upgraded to. */
     int getMaxLevel() const;
 
     /** @return Cost paid to buy this tower at level 1. */
@@ -39,12 +53,15 @@ public:
     /** @return Sell refund for the current level (portion of money spent). */
     int getRefundValue() const;
 
+    /** @return Range at the current level, in map cells (distance from the tower's cell). */
     float getRange() const;
+    /** @return Damage (or effect strength) of one shot at the current level. */
     int getPower() const;
 
     /** @return Shots per second at the current level. */
     float getFireRate() const;
 
+    /** @return True if the tower is below its maximum level. */
     bool canUpgrade() const;
 
     /**
@@ -60,10 +77,14 @@ public:
      */
     void update(float dt, std::vector<Critter*>& critters);
 
-    /** @return Critters currently within range (alive only). */
+    /**
+     * @brief Finds the critters this tower can currently shoot.
+     * @param critters All critters on the map (null or dead ones are skipped).
+     * @return Critters currently within range (alive only).
+     */
     std::vector<Critter*> detectTargets(const std::vector<Critter*>& critters) const;
 
-    /** 
+    /**
      * @return Direction the tower is facing, in degrees: 0 = right (+col),
      *         90 = down (+row), clockwise as in SFML. Follows the current target.
      */
@@ -80,6 +101,7 @@ public:
 
 protected:
     /**
+     * @brief Creates a level-1 tower. Only subclasses call this, with their own stats.
      * @param row           Placement row (scenery cell).
      * @param col           Placement column.
      * @param buyCost       Purchase price at level 1.
@@ -94,6 +116,8 @@ protected:
     /**
      * @brief Picks which detected critter to shoot.
      * Default: furthest along the path ("first" / closest to exit).
+     * @param inRange Critters returned by detectTargets().
+     * @return The critter to shoot, or nullptr if there is none.
      */
     virtual Critter* selectTarget(const std::vector<Critter*>& inRange) const;
 
@@ -107,24 +131,24 @@ protected:
     /** @brief Recalculates range, power and fire rate from level. */
     void refreshStats();
 
-    int row;
-    int col;
-    int level;
-    int maxLevel;
-    int buyCost;
+    int row;          ///< Row of the tower's cell.
+    int col;          ///< Column of the tower's cell.
+    int level;        ///< Current level (starts at 1).
+    int maxLevel;     ///< Highest level allowed.
+    int buyCost;      ///< Purchase price at level 1; also sets the upgrade costs.
     int totalSpent;   ///< Buy + all upgrades so far (basis for refund).
-    float baseRange;
-    int basePower;
-    float baseFireRate;
-    float range;
-    int power;
-    float fireRate;
+    float baseRange;  ///< Range at level 1, in cells.
+    int basePower;    ///< Power at level 1.
+    float baseFireRate; ///< Shots per second at level 1.
+    float range;      ///< Range at the current level (set by refreshStats()).
+    int power;        ///< Power at the current level (set by refreshStats()).
+    float fireRate;   ///< Shots per second at the current level (set by refreshStats()).
     float cooldown;   ///< Seconds until the next shot is allowed.
 
     float facingDegrees = 0.f;  ///< Current aim; 0 = facing right.
     bool justFired = false;     ///< Set by update() on the frame a shot is fired.
-    float lastTargetRow = 0.f;  ///< Target position at the last shot.
-    float lastTargetCol = 0.f;
+    float lastTargetRow = 0.f;  ///< Target row at the last shot.
+    float lastTargetCol = 0.f;  ///< Target column at the last shot.
 
 };
 
