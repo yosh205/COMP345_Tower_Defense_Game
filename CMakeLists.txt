@@ -40,6 +40,7 @@ add_executable(towerdefense
     src/Tower/DirectDamageTower.cpp
     src/Tower/AreaDamageTower.cpp
     src/Tower/SlowingTower.cpp
+    src/Observer/Observable.cpp
 )
 
 target_include_directories(towerdefense PRIVATE src)
@@ -63,6 +64,7 @@ add_executable(tests
     src/Tower/DirectDamageTower.cpp
     src/Tower/AreaDamageTower.cpp
     src/Tower/SlowingTower.cpp
+    src/Observer/Observable.cpp
 )
 target_include_directories(tests PRIVATE src)
 
