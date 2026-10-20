@@ -29,6 +29,8 @@ Map::Map(int length, int width) : length(length), width(width) {
     }
     // length rows, each holding width Scenery cells (a blank map)
     grid = std::vector<std::vector<CellType>>(length, std::vector<CellType>(width, CellType::Scenery));
+    // No towers on a new map.
+    towers = std::vector<std::vector<bool>>(length, std::vector<bool>(width, false));
 }
 
 // --- Getters ---
@@ -45,7 +47,14 @@ bool Map::setCell(int row, int col, CellType type) {
     if (!isInBounds(row, col)) {
         return false;
     }
+    if (grid[row][col] == type) {
+        return true; // nothing changed, so observers dont need to redraw
+    }
     grid[row][col] = type;
+    if (type != CellType::Scenery) {
+        towers[row][col] = false; // towers can only stand on scenery
+    }
+    notify();
     return true;
 }
 
@@ -56,11 +65,45 @@ bool Map::isInBounds(int row, int col) const {
 }
 
 bool Map::canPlaceTower(int row, int col) const {
-    return isInBounds(row, col) && grid[row][col] == CellType::Scenery;
+    return isInBounds(row, col) && grid[row][col] == CellType::Scenery && !towers[row][col];
 }
 
 bool Map::isWalkable(int row, int col) const {
     return isInBounds(row, col) && grid[row][col] != CellType::Scenery;
+}
+
+// --- Towers on the map ---
+
+bool Map::placeTower(int row, int col) {
+    if (!canPlaceTower(row, col)) {
+        return false;
+    }
+    towers[row][col] = true;
+    notify();
+    return true;
+}
+
+bool Map::removeTower(int row, int col) {
+    if (!hasTower(row, col)) {
+        return false;
+    }
+    towers[row][col] = false;
+    notify();
+    return true;
+}
+
+bool Map::moveTower(int fromRow, int fromCol, int toRow, int toCol) {
+    if (!hasTower(fromRow, fromCol) || !canPlaceTower(toRow, toCol)) {
+        return false;
+    }
+    towers[fromRow][fromCol] = false;
+    towers[toRow][toCol] = true;
+    notify();
+    return true;
+}
+
+bool Map::hasTower(int row, int col) const {
+    return isInBounds(row, col) && towers[row][col];
 }
 
 // --- Validation ---
