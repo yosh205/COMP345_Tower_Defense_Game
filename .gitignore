@@ -78,3 +78,5 @@ x64/
 x86/
 Debug/
 Release/
+# Doxygen output (regenerate with: doxygen docs/Doxyfile)
+docs/html/
