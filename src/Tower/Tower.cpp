@@ -64,6 +64,8 @@ bool Tower::upgrade() {
     totalSpent += getUpgradeCost();
     ++level;
     refreshStats();
+    // Stats changed: ask every attached observer to redraw this tower.
+    notify();
     return true;
 }
 

@@ -57,8 +57,9 @@ few minutes; after a code change only `cmake --build build -j` is needed.
 
 ### Running the tests
 
-`tests/tests.cpp` checks the game rules of the map, towers, critters and waves
-(86 checks). It is a separate program and does not need SFML or a screen.
+`tests/tests.cpp` checks the game rules of the map, towers, critters and waves,
+including the tower observer
+(106 checks). It is a separate program and does not need SFML or a screen.
 
 ```bash
 # With CMake (after building as above)
@@ -66,7 +67,7 @@ few minutes; after a code change only `cmake --build build -j` is needed.
 ctest --test-dir build --output-on-failure
 
 # Or with g++ only
-g++ -std=c++17 -Wall -Isrc tests/tests.cpp src/Map/*.cpp src/Critter/*.cpp src/Tower/*.cpp -o tests_run
+g++ -std=c++17 -Wall -Isrc tests/tests.cpp src/Map/*.cpp src/Critter/*.cpp src/Tower/*.cpp src/Observer/*.cpp -o tests_run
 ./tests_run
 ```
 
@@ -93,11 +94,14 @@ Everything is in-game menus (no console prompts):
 3. **Select tower** — click it on the map to see its range and stats, **Upgrade** / **Sell**
 4. **Start Wave** — sidebar button; critters enter one per second. While a wave runs the
    sidebar shows how many critters are left; when it ends, the button returns for the next, harder wave.
+   Each wave starts with **3 hearts**. A critter that reaches the exit removes half a heart.
+   At 0 hearts the game over screen offers **Play Again** or **Main Menu**.
 5. **New map** / **Fullscreen** — sidebar buttons (**F11** also toggles fullscreen)  
    Right-click cancels shop selection
 
 The sidebar shows your **gold** (it rises when towers kill critters and drops when
-critters reach the exit) and the current **wave**. Towers turn to face their target.
+critters reach the exit), the current **wave**, and a **health bar** of 3 hearts.
+Towers turn to face their target.
 The map scales to fill the play area (left of the sidebar).
 
 ## Game Rules
@@ -148,8 +152,8 @@ COMP 345 Assignment 1 specification [3]; the numbers are the values used in the 
   (+50% for Armored critters).
 - A critter that **reaches the exit steals coins** according to its **strength**:
   3 coins per point of strength (strength = level, +1 for Fast critters).
-  In games such as Bloons TD an escaping enemy costs lives instead [2];
-  this game uses coin theft, as the assignment requires [3].
+  It also removes **half a heart**. The player has **3 hearts at the start of each wave**.
+  At 0 hearts the run ends on the game over screen.
 - The player starts with 500 coins; gold never goes below 0.
 
 ### Sources
@@ -165,10 +169,11 @@ without a window (see `tests/tests.cpp`).
 | Folder | Classes | Responsibility |
 |---|---|---|
 | `src/Map` | `Map`, `generateRandomMap()`, `makeMapExamples()` | Grid of cells, setters, validity check, entry-to-exit path (breadth-first search); example valid/invalid maps for the demo |
-| `src/Tower` | `Tower` (abstract), `DirectDamageTower`, `AreaDamageTower`, `SlowingTower` | Costs, levels, upgrade/sell, detect → select → shoot. Subclasses only change the shot's effect (`fireAt()`) |
+| `src/Tower` | `Tower` (abstract), `DirectDamageTower`, `AreaDamageTower`, `SlowingTower`, `TowerObserver`, `TowerObserverDriver` | Costs, levels, upgrade/sell, detect → select → shoot. Subclasses only change the shot's effect (`fireAt()`). `Tower` is an Observable; `TowerObserverDriver` plugs in a `TowerObserver` and upgrades the tower so the view is printed again after each change |
+| `src/Observer` | `Observable`, `Observer` | Subject/observer base. `attach` / `detach` / `notify` |
 | `src/Critter` | `Critter`, `CritterGroupGenerator` | Critter stats and effects; creating a wave, spawning, moving along the path, rewards and theft |
 | `src/GUI` | `MapView`, `TowerView`, `CritterView`, `Hud` | Drawing with SFML and the menus/sidebar. Views only read the game objects |
-| `src/main.cpp` | — | Driver: start menu, then each frame spawn → move → pay coins → towers shoot → draw |
+| `src/main.cpp` | — | Driver: start menu, then each frame spawn → move → pay coins and hearts → towers shoot → draw. At 0 hearts, the game over screen |
 
 ```
                  Tower (abstract)

@@ -80,6 +80,13 @@ public:
 	 */
 	int collectCoinsStolen();
 
+	/**
+	 * @brief Critters that reached the exit since the last call, then resets to 0.
+	 * Each one costs the player half a heart. Call once per frame.
+	 * @return How many critters escaped since the last call.
+	 */
+	int collectCrittersEscaped();
+
 	/** @return Number of critters currently on the map (not counting those still waiting). */
 	int activeCrittersLeft();
 
@@ -122,8 +129,9 @@ private:
 	 */
 	int addCritterToGroup(Critter crit);
 
-	int coinsEarned = 0; ///< Rewards from killed critters, not yet collected.
-	int coinsStolen = 0; ///< Coins taken by escaped critters, not yet collected.
+	int coinsEarned = 0;     ///< Rewards from killed critters, not yet collected.
+	int coinsStolen = 0;     ///< Coins taken by escaped critters, not yet collected.
+	int crittersEscaped = 0; ///< Critters that reached the exit, not yet collected.
 };
 
 #endif

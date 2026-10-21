@@ -30,6 +30,18 @@ int Hud::getMapCols() const { return mapCols; }
 void Hud::setGold(int g) { gold = g; }
 int Hud::getGold() const { return gold; }
 
+void Hud::refillHealth() { healthHalves = kHeartsPerWave * 2; }
+
+void Hud::loseHalfHearts(int escapes) {
+    if (escapes <= 0) {
+        return;
+    }
+    healthHalves = std::max(0, healthHalves - escapes);
+}
+
+int Hud::getHealthHalves() const { return healthHalves; }
+bool Hud::isDefeated() const { return healthHalves <= 0; }
+
 ShopSelection Hud::getShopSelection() const { return shopSelection; }
 void Hud::clearShopSelection() { shopSelection = ShopSelection::None; }
 
@@ -54,6 +66,55 @@ int Hud::priceOf(ShopSelection item) {
 void Hud::drawLabel(sf::RenderWindow& window, const std::string& text,
                     float x, float y, float scale, sf::Color color) const {
     SimpleText::draw(window, text, x, y, scale, color);
+}
+
+void Hud::drawHeart(sf::RenderWindow& window, float x, float y, float size, int halves) const {
+    const sf::Color filled(214, 54, 68);
+    const sf::Color empty(48, 36, 42);
+    const sf::Color line(110, 36, 46);
+    const auto lobeColor = [&](bool left) {
+        if (halves >= 2) {
+            return filled;
+        }
+        if (halves == 1 && left) {
+            return filled;
+        }
+        return empty;
+    };
+
+    // Point of the heart, split so a half heart can fill only the left side.
+    sf::ConvexShape leftTip;
+    leftTip.setPointCount(3);
+    leftTip.setPoint(0, sf::Vector2f(x + size * 0.50f, y + size * 0.36f));
+    leftTip.setPoint(1, sf::Vector2f(x + size * 0.08f, y + size * 0.40f));
+    leftTip.setPoint(2, sf::Vector2f(x + size * 0.50f, y + size * 0.96f));
+    leftTip.setFillColor(halves >= 1 ? filled : empty);
+
+    sf::ConvexShape rightTip;
+    rightTip.setPointCount(3);
+    rightTip.setPoint(0, sf::Vector2f(x + size * 0.50f, y + size * 0.36f));
+    rightTip.setPoint(1, sf::Vector2f(x + size * 0.92f, y + size * 0.40f));
+    rightTip.setPoint(2, sf::Vector2f(x + size * 0.50f, y + size * 0.96f));
+    rightTip.setFillColor(halves >= 2 ? filled : empty);
+
+    window.draw(leftTip);
+    window.draw(rightTip);
+
+    sf::CircleShape leftLobe(size * 0.26f);
+    leftLobe.setOrigin(leftLobe.getRadius(), leftLobe.getRadius());
+    leftLobe.setPosition(x + size * 0.32f, y + size * 0.32f);
+    leftLobe.setFillColor(lobeColor(true));
+    leftLobe.setOutlineThickness(1.25f);
+    leftLobe.setOutlineColor(line);
+    window.draw(leftLobe);
+
+    sf::CircleShape rightLobe(size * 0.26f);
+    rightLobe.setOrigin(rightLobe.getRadius(), rightLobe.getRadius());
+    rightLobe.setPosition(x + size * 0.68f, y + size * 0.32f);
+    rightLobe.setFillColor(lobeColor(false));
+    rightLobe.setOutlineThickness(1.25f);
+    rightLobe.setOutlineColor(line);
+    window.draw(rightLobe);
 }
 
 void Hud::drawButton(sf::RenderWindow& window, sf::FloatRect rect,
@@ -173,7 +234,34 @@ void Hud::drawPlayHud(sf::RenderWindow& window, const Tower* selected) const {
     drawLabel(window, "WAVE", x + 160.f, y, 2.f, sf::Color(160, 175, 195));
     drawLabel(window, std::to_string(wave), x + 160.f, y + 24.f, 3.f,
               sf::Color(230, 120, 230));
-    y += 70.f;
+    y += 64.f;
+
+    drawLabel(window, "HEALTH", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
+    const float heartSize = 28.f;
+    const float heartGap = 10.f;
+    const float heartsX = x + 18.f;
+    const float heartsY = y + 24.f;
+
+    sf::RectangleShape healthBar(sf::Vector2f(kSidebarWidth - 36.f, heartSize + 12.f));
+    healthBar.setPosition(x + 14.f, heartsY - 4.f);
+    healthBar.setFillColor(sf::Color(14, 16, 22));
+    healthBar.setOutlineThickness(1.5f);
+    healthBar.setOutlineColor(sf::Color(70, 110, 150));
+    window.draw(healthBar);
+
+    for (int i = 0; i < kHeartsPerWave; ++i) {
+        const int have = healthHalves - i * 2;
+        const int fill = have >= 2 ? 2 : (have == 1 ? 1 : 0);
+        drawHeart(window, heartsX + i * (heartSize + heartGap), heartsY + 2.f, heartSize, fill);
+    }
+    const int wholeHearts = healthHalves / 2;
+    const std::string healthText = (healthHalves % 2 == 0)
+                                        ? std::to_string(wholeHearts)
+                                        : (std::to_string(wholeHearts) + ".5");
+    drawLabel(window, healthText,
+              heartsX + kHeartsPerWave * (heartSize + heartGap) + 8.f,
+              heartsY + 8.f, 2.f, sf::Color(235, 90, 100));
+    y += 62.f;
 
     drawLabel(window, "SHOP", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
     y += 22.f;
@@ -282,6 +370,53 @@ std::string Hud::handlePlayClick(sf::Vector2f pos, const Tower* selected) {
     }
     if (contains(playFullscreenBtn, pos)) {
         return "toggle_fullscreen";
+    }
+    return "none";
+}
+
+void Hud::drawGameOver(sf::RenderWindow& window, int wave) const {
+    const float w = static_cast<float>(window.getSize().x);
+    const float h = static_cast<float>(window.getSize().y);
+
+    sf::RectangleShape bg(sf::Vector2f(w, h));
+    bg.setFillColor(sf::Color(18, 24, 32));
+    window.draw(bg);
+
+    sf::RectangleShape panel(sf::Vector2f(480.f, 360.f));
+    panel.setPosition((w - 480.f) * 0.5f, (h - 360.f) * 0.5f);
+    panel.setFillColor(sf::Color(28, 38, 52));
+    panel.setOutlineThickness(2.f);
+    panel.setOutlineColor(sf::Color(70, 110, 150));
+    window.draw(panel);
+
+    const float px = panel.getPosition().x;
+    const float py = panel.getPosition().y;
+    const auto centerX = [&](const std::string& text, float scale) {
+        const float textW = static_cast<float>(text.size()) * 6.f * scale;
+        return px + (480.f - textW) * 0.5f;
+    };
+
+    drawLabel(window, "GAME OVER", centerX("GAME OVER", 3.f), py + 36.f, 3.f,
+              sf::Color(235, 80, 70));
+    drawLabel(window, "NO HEARTS LEFT", centerX("NO HEARTS LEFT", 2.f), py + 90.f, 2.f,
+              sf::Color(220, 225, 235));
+    const std::string waveLine = "WAVE " + std::to_string(wave);
+    drawLabel(window, waveLine, centerX(waveLine, 2.5f), py + 130.f, 2.5f,
+              sf::Color(230, 120, 230));
+
+    gameOverAgainBtn = makeRect(px + 90.f, py + 190.f, 300.f, 52.f);
+    drawButton(window, gameOverAgainBtn, "PLAY AGAIN", sf::Color(40, 130, 90));
+
+    gameOverMenuBtn = makeRect(px + 90.f, py + 260.f, 300.f, 52.f);
+    drawButton(window, gameOverMenuBtn, "MAIN MENU", sf::Color(50, 70, 95));
+}
+
+std::string Hud::handleGameOverClick(sf::Vector2f pos) const {
+    if (contains(gameOverAgainBtn, pos)) {
+        return "again";
+    }
+    if (contains(gameOverMenuBtn, pos)) {
+        return "menu";
     }
     return "none";
 }

@@ -32,6 +32,9 @@ public:
     /** @brief Width of the sidebar on the right of the window, in pixels. */
     static constexpr float kSidebarWidth = 280.f;
 
+    /** @brief Hearts the player starts each wave with. One escape removes half a heart. */
+    static constexpr int kHeartsPerWave = 3;
+
     /** @brief Creates the HUD with a 10 x 12 map size, 500 gold and nothing selected. */
     Hud() = default;
 
@@ -95,6 +98,25 @@ public:
     void setGold(int gold);
     /** @return The player's current gold. */
     int getGold() const;
+
+    /**
+     * @brief Fills the health bar back to kHeartsPerWave hearts.
+     * Called at the start of each wave (and when a new game or map begins).
+     */
+    void refillHealth();
+
+    /**
+     * @brief Removes half a heart for each critter that reached the exit.
+     * Health never goes below 0.
+     * @param escapes Number of critters that escaped this frame.
+     */
+    void loseHalfHearts(int escapes);
+
+    /** @return Health left, in half-hearts (6 = 3 hearts, 1 = half a heart). */
+    int getHealthHalves() const;
+
+    /** @return True when no hearts are left and the run is over. */
+    bool isDefeated() const;
     /** @return The tower type armed for placement, or ShopSelection::None. */
     ShopSelection getShopSelection() const;
     /** @brief Disarms the shop (ShopSelection::None), e.g. after placing a tower. */
@@ -125,6 +147,20 @@ public:
     std::string handlePlayClick(sf::Vector2f pos, const Tower* selected);
 
     /**
+     * @brief Draws the game over screen in the same style as the start menu.
+     * @param window The window to draw into.
+     * @param wave   The wave the player lost on.
+     */
+    void drawGameOver(sf::RenderWindow& window, int wave) const;
+
+    /**
+     * @brief Handles a click on the game over screen.
+     * @param pos Mouse position in window pixels.
+     * @return "again", "menu" or "none".
+     */
+    std::string handleGameOverClick(sf::Vector2f pos) const;
+
+    /**
      * @param item A tower type.
      * @return Shop price for a tower type (matches tower buy costs).
      */
@@ -142,6 +178,7 @@ private:
     int mapRows = 10;             ///< Map rows chosen in the start menu.
     int mapCols = 12;             ///< Map columns chosen in the start menu.
     int gold = 500;               ///< Player's gold shown in the sidebar.
+    int healthHalves = kHeartsPerWave * 2;  ///< Health left, in half-hearts. 6 = full.
     ShopSelection shopSelection = ShopSelection::None;  ///< Tower type armed for placement.
     bool fullscreenPreferred = false;  ///< Fullscreen option from the menu / F11.
     int wave = 0;                 ///< Wave number shown in the sidebar.
@@ -172,6 +209,16 @@ private:
                    float x, float y, float scale,
                    sf::Color color = sf::Color::White) const;
 
+    /**
+     * @brief Draws one heart, full, half or empty.
+     * @param window The window to draw into.
+     * @param x      Left edge, in pixels.
+     * @param y      Top edge, in pixels.
+     * @param size   Width and height of the heart, in pixels.
+     * @param halves 0 empty, 1 left half filled, 2 full.
+     */
+    void drawHeart(sf::RenderWindow& window, float x, float y, float size, int halves) const;
+
     // Button areas, in pixels. They are set while drawing (so they are
     // 'mutable' in the const draw functions) and read when handling clicks.
     // An empty rectangle means the button is hidden and cannot be clicked.
@@ -196,6 +243,9 @@ private:
     mutable sf::FloatRect newMapBtn;          ///< Sidebar: generate a new map.
     mutable sf::FloatRect playFullscreenBtn;  ///< Sidebar: toggle fullscreen.
     mutable sf::FloatRect startWaveBtn;       ///< Sidebar: Start Wave (empty while a wave runs).
+
+    mutable sf::FloatRect gameOverAgainBtn;  ///< Game over: Play Again.
+    mutable sf::FloatRect gameOverMenuBtn;   ///< Game over: Main Menu.
 };
 
 #endif // Hud_h

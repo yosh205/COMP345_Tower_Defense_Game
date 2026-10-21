@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "../Critter/Critter.h"
+#include "../Observer/Observable.h"
 
 /**
  * @brief Abstract tower placed on a scenery cell.
@@ -26,8 +27,11 @@
  * - When operating, the tower detects critters in range, selects the one furthest
  *   along the path, and shoots it. The effect of the shot depends on the subclass
  *   (DirectDamageTower, AreaDamageTower, SlowingTower).
+ *
+ * Tower is an Observable. upgrade() notifies attached observers after the new
+ * level, range, power and rate of fire are in place, so a view can redraw.
  */
-class Tower {
+class Tower : public Observable {
 public:
     /** @brief Virtual so towers can be deleted through a Tower pointer. */
     virtual ~Tower() = default;

@@ -3,7 +3,7 @@
  * @brief Game loop: start menu → map + shop HUD → click to place/upgrade towers.
  *
  * Map fills the play area (left of the sidebar). F11 / button toggles fullscreen.
- * Critters are deferred to a later part.
+ * Escaping critters cost half a heart. At 0 hearts the game over screen is shown.
  */
 #include <SFML/Graphics.hpp>
 #include <algorithm>
@@ -23,11 +23,12 @@
 #include "Tower/DirectDamageTower.h"
 #include "Tower/SlowingTower.h"
 #include "Tower/Tower.h"
+#include "Tower/TowerObserverDriver.h"
 #include "Critter/Critter.h"
 #include "Critter/CritterGroupGenerator.h"
 namespace {
 
-enum class AppState { StartMenu, MapDemo, Playing };
+enum class AppState { StartMenu, MapDemo, Playing, GameOver };
 
 bool isOccupied(const std::vector<std::unique_ptr<Tower>>& towers, int row, int col) {
     for (const auto& t : towers) {
@@ -94,6 +95,12 @@ void printMapExamples(const std::vector<MapExample>& examples) {
  * @return 0 when the window is closed.
  */
 int main() {
+    // Console demonstration of the tower observer: each upgrade redisplays the view.
+    std::cout << "Tower observer driver (the view is redrawn after each change):\n";
+    TowerObserverDriver observerDemo;
+    observerDemo.run(std::cout);
+    std::cout << "\n";
+
     const sf::VideoMode desktop = sf::VideoMode::getDesktopMode();
     const sf::VideoMode windowed(1280, 720);
 
@@ -126,6 +133,7 @@ int main() {
         wave = CritterGroupGenerator(waveNumber);
         spawnTimer = kSpawnInterval;  // first critter enters right away
         waveInProgress = true;
+        hud.refillHealth();  // 3 hearts for this wave
     };
 
     // Forget any wave on the map (used for a new game or a new map).
@@ -134,6 +142,7 @@ int main() {
         waveNumber = 0;
         waveInProgress = false;
         spawnTimer = 0.f;
+        hud.refillHealth();
     };
 
     Map map(4, 4);
@@ -238,28 +247,38 @@ int main() {
                 hud.setGold(std::max(0, hud.getGold() + earned - stolen));
             }
 
-            // --- Towers attack critters (Part 2) ---
-            // Get pointers to the critters on the map. Towers need pointers (not
-            // copies) so the damage and slow effects change the real critters.
-            // The list is rebuilt every frame because critters are added and
-            // removed by findNextCritter() and moveAlongPath() above.
-            std::vector<Critter*> targets = wave.getActiveCritterPointers();
-
-            // Tower::update() does the whole attack for one tower:
-            //   1. counts down its cooldown (rate of fire),
-            //   2. detects the living critters within its range,
-            //   3. selects the one furthest along the path,
-            //   4. shoots it (direct damage, area damage, or slow, by tower type).
-            // Dead critters are skipped here and removed by moveAlongPath() next frame.
-            for (auto& tower : towers) {
-                tower->update(dt, targets);
+            // Each escaped critter removes half a heart. At 0 the run is over.
+            const int escaped = wave.collectCrittersEscaped();
+            if (escaped > 0) {
+                hud.loseHalfHearts(escaped);
             }
-
-            // --- End of wave ---
-            // Every critter has been killed or has escaped: the Start Wave
-            // button comes back for the next (harder) wave.
-            if (wave.crittersRemaining() == 0) {
+            if (hud.isDefeated()) {
                 waveInProgress = false;
+                state = AppState::GameOver;
+            } else {
+                // --- Towers attack critters (Part 2) ---
+                // Get pointers to the critters on the map. Towers need pointers (not
+                // copies) so the damage and slow effects change the real critters.
+                // The list is rebuilt every frame because critters are added and
+                // removed by findNextCritter() and moveAlongPath() above.
+                std::vector<Critter*> targets = wave.getActiveCritterPointers();
+
+                // Tower::update() does the whole attack for one tower:
+                //   1. counts down its cooldown (rate of fire),
+                //   2. detects the living critters within its range,
+                //   3. selects the one furthest along the path,
+                //   4. shoots it (direct damage, area damage, or slow, by tower type).
+                // Dead critters are skipped here and removed by moveAlongPath() next frame.
+                for (auto& tower : towers) {
+                    tower->update(dt, targets);
+                }
+
+                // --- End of wave ---
+                // Every critter has been killed or has escaped: the Start Wave
+                // button comes back for the next (harder) wave.
+                if (wave.crittersRemaining() == 0) {
+                    waveInProgress = false;
+                }
             }
         }
 
@@ -320,6 +339,23 @@ int main() {
                     exampleIndex = (exampleIndex + count - 1) % count;
                 } else if (action == "back") {
                     state = AppState::StartMenu;
+                }
+                continue;
+            }
+
+            if (state == AppState::GameOver) {
+                if (event.type == sf::Event::MouseButtonPressed &&
+                    event.mouseButton.button == sf::Mouse::Left) {
+                    const std::string action = hud.handleGameOverClick(mouseF);
+                    if (action == "again") {
+                        beginPlay();
+                    } else if (action == "menu") {
+                        towers.clear();
+                        selectedTower = -1;
+                        hud.clearShopSelection();
+                        resetWaves();
+                        state = AppState::StartMenu;
+                    }
                 }
                 continue;
             }
@@ -417,6 +453,8 @@ int main() {
             hud.drawMapDemo(window, example.name, example.rule, example.map.isValid(),
                             static_cast<int>(exampleIndex),
                             static_cast<int>(mapExamples.size()));
+        } else if (state == AppState::GameOver) {
+            hud.drawGameOver(window, waveNumber);
         } else {
             // Dim the unused letterbox around the map.
             sf::RectangleShape mapBg(sf::Vector2f(mapAreaW, static_cast<float>(window.getSize().y)));
