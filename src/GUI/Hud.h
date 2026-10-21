@@ -210,14 +210,14 @@ private:
                    sf::Color color = sf::Color::White) const;
 
     /**
-     * @brief Draws one heart, full, half or empty.
+     * @brief Draws one pixel heart, full, half or empty, in the bitmap-font style.
      * @param window The window to draw into.
      * @param x      Left edge, in pixels.
      * @param y      Top edge, in pixels.
-     * @param size   Width and height of the heart, in pixels.
+     * @param scale  Size of one heart pixel (2–3 matches the sidebar text).
      * @param halves 0 empty, 1 left half filled, 2 full.
      */
-    void drawHeart(sf::RenderWindow& window, float x, float y, float size, int halves) const;
+    void drawHeart(sf::RenderWindow& window, float x, float y, float scale, int halves) const;
 
     // Button areas, in pixels. They are set while drawing (so they are
     // 'mutable' in the const draw functions) and read when handling clicks.

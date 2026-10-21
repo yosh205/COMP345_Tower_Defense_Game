@@ -68,53 +68,31 @@ void Hud::drawLabel(sf::RenderWindow& window, const std::string& text,
     SimpleText::draw(window, text, x, y, scale, color);
 }
 
-void Hud::drawHeart(sf::RenderWindow& window, float x, float y, float size, int halves) const {
-    const sf::Color filled(214, 54, 68);
-    const sf::Color empty(48, 36, 42);
-    const sf::Color line(110, 36, 46);
-    const auto lobeColor = [&](bool left) {
-        if (halves >= 2) {
-            return filled;
-        }
-        if (halves == 1 && left) {
-            return filled;
-        }
-        return empty;
+void Hud::drawHeart(sf::RenderWindow& window, float x, float y, float scale, int halves) const {
+    // 7x6 bitmap, same block pixels as SimpleText. '#' is part of the heart.
+    static const char* rows[6] = {
+        ".##.##.",
+        "#######",
+        "#######",
+        ".#####.",
+        "..###..",
+        "...#...",
     };
-
-    // Point of the heart, split so a half heart can fill only the left side.
-    sf::ConvexShape leftTip;
-    leftTip.setPointCount(3);
-    leftTip.setPoint(0, sf::Vector2f(x + size * 0.50f, y + size * 0.36f));
-    leftTip.setPoint(1, sf::Vector2f(x + size * 0.08f, y + size * 0.40f));
-    leftTip.setPoint(2, sf::Vector2f(x + size * 0.50f, y + size * 0.96f));
-    leftTip.setFillColor(halves >= 1 ? filled : empty);
-
-    sf::ConvexShape rightTip;
-    rightTip.setPointCount(3);
-    rightTip.setPoint(0, sf::Vector2f(x + size * 0.50f, y + size * 0.36f));
-    rightTip.setPoint(1, sf::Vector2f(x + size * 0.92f, y + size * 0.40f));
-    rightTip.setPoint(2, sf::Vector2f(x + size * 0.50f, y + size * 0.96f));
-    rightTip.setFillColor(halves >= 2 ? filled : empty);
-
-    window.draw(leftTip);
-    window.draw(rightTip);
-
-    sf::CircleShape leftLobe(size * 0.26f);
-    leftLobe.setOrigin(leftLobe.getRadius(), leftLobe.getRadius());
-    leftLobe.setPosition(x + size * 0.32f, y + size * 0.32f);
-    leftLobe.setFillColor(lobeColor(true));
-    leftLobe.setOutlineThickness(1.25f);
-    leftLobe.setOutlineColor(line);
-    window.draw(leftLobe);
-
-    sf::CircleShape rightLobe(size * 0.26f);
-    rightLobe.setOrigin(rightLobe.getRadius(), rightLobe.getRadius());
-    rightLobe.setPosition(x + size * 0.68f, y + size * 0.32f);
-    rightLobe.setFillColor(lobeColor(false));
-    rightLobe.setOutlineThickness(1.25f);
-    rightLobe.setOutlineColor(line);
-    window.draw(rightLobe);
+    const sf::Color filled(235, 80, 70);
+    const sf::Color empty(58, 46, 54);
+    sf::RectangleShape pixel(sf::Vector2f(scale, scale));
+    for (int row = 0; row < 6; ++row) {
+        for (int col = 0; col < 7; ++col) {
+            if (rows[row][col] != '#') {
+                continue;
+            }
+            const bool on = halves >= 2 || (halves == 1 && col <= 3);
+            pixel.setFillColor(on ? filled : empty);
+            pixel.setPosition(x + static_cast<float>(col) * scale,
+                              y + static_cast<float>(row) * scale);
+            window.draw(pixel);
+        }
+    }
 }
 
 void Hud::drawButton(sf::RenderWindow& window, sf::FloatRect rect,
@@ -234,34 +212,28 @@ void Hud::drawPlayHud(sf::RenderWindow& window, const Tower* selected) const {
     drawLabel(window, "WAVE", x + 160.f, y, 2.f, sf::Color(160, 175, 195));
     drawLabel(window, std::to_string(wave), x + 160.f, y + 24.f, 3.f,
               sf::Color(230, 120, 230));
-    y += 64.f;
+    y += 52.f;
 
-    drawLabel(window, "HEALTH", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
-    const float heartSize = 28.f;
-    const float heartGap = 10.f;
-    const float heartsX = x + 18.f;
-    const float heartsY = y + 24.f;
-
-    sf::RectangleShape healthBar(sf::Vector2f(kSidebarWidth - 36.f, heartSize + 12.f));
-    healthBar.setPosition(x + 14.f, heartsY - 4.f);
-    healthBar.setFillColor(sf::Color(14, 16, 22));
-    healthBar.setOutlineThickness(1.5f);
-    healthBar.setOutlineColor(sf::Color(70, 110, 150));
-    window.draw(healthBar);
-
+    // One short row under gold/wave: label, pixel hearts, then the number.
+    // Kept clear of the shop buttons below.
+    drawLabel(window, "HEALTH", x + 18.f, y + 2.f, 2.f, sf::Color(160, 175, 195));
+    const float heartScale = 3.f;
+    const float heartW = 7.f * heartScale;
+    const float heartGap = 6.f;
+    const float heartsX = x + 18.f + 6.f * 6.f * 2.f + 10.f;
     for (int i = 0; i < kHeartsPerWave; ++i) {
         const int have = healthHalves - i * 2;
         const int fill = have >= 2 ? 2 : (have == 1 ? 1 : 0);
-        drawHeart(window, heartsX + i * (heartSize + heartGap), heartsY + 2.f, heartSize, fill);
+        drawHeart(window, heartsX + i * (heartW + heartGap), y, heartScale, fill);
     }
     const int wholeHearts = healthHalves / 2;
     const std::string healthText = (healthHalves % 2 == 0)
                                         ? std::to_string(wholeHearts)
                                         : (std::to_string(wholeHearts) + ".5");
     drawLabel(window, healthText,
-              heartsX + kHeartsPerWave * (heartSize + heartGap) + 8.f,
-              heartsY + 8.f, 2.f, sf::Color(235, 90, 100));
-    y += 62.f;
+              heartsX + kHeartsPerWave * (heartW + heartGap) + 4.f,
+              y + 2.f, 2.f, sf::Color(235, 90, 100));
+    y += 32.f;
 
     drawLabel(window, "SHOP", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
     y += 22.f;
