@@ -63,8 +63,9 @@ void CritterGroupGenerator::moveAlongPath(std::vector<Position> path, float dt) 
 			// Position at final tile exit
 			critter.setPosition(static_cast<float>(path.back().row),
 				static_cast<float>(path.back().col));
-			// It got through: it steals coins based on its strength.
+			// It got through: it steals coins based on its strength, and costs half a heart.
 			coinsStolen += critter.getCoinsStolen();
+			++crittersEscaped;
 			deleteCritter(i);
 			continue;
 		}
@@ -109,6 +110,12 @@ int CritterGroupGenerator::collectCoinsStolen() {
 	const int stolen = coinsStolen;
 	coinsStolen = 0;
 	return stolen;
+}
+
+int CritterGroupGenerator::collectCrittersEscaped() {
+	const int escaped = crittersEscaped;
+	crittersEscaped = 0;
+	return escaped;
 }
 
 int CritterGroupGenerator::deleteCritter(int critterIndex) {

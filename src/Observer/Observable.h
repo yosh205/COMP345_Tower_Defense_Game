@@ -16,6 +16,9 @@
  */
 class Observable {
     public:
+        /** @brief Virtual so subjects can be deleted through an Observable pointer. */
+        virtual ~Observable() = default;
+
         /** @brief Creates a subject with no observers. */
         Observable() = default;
 

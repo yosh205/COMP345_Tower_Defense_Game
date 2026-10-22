@@ -15,9 +15,13 @@
 #include "Critter/CritterGroupGenerator.h"
 #include "Map/Map.h"
 #include "Map/MapExamples.h"
+#include "Observer/Observer.h"
 #include "Tower/AreaDamageTower.h"
 #include "Tower/DirectDamageTower.h"
 #include "Tower/SlowingTower.h"
+#include "Tower/TowerObserverDriver.h"
+
+#include <sstream>
 
 namespace {
 
@@ -355,7 +359,9 @@ void testWaveCoins() {
     }
     CHECK(escaping.collectCoinsStolen() == toSteal);
     CHECK(escaping.collectCoinsEarned() == 0);
+    CHECK(escaping.collectCrittersEscaped() == 1);  // one escape costs half a heart
     CHECK(escaping.collectCoinsStolen() == 0);  // collecting resets the count
+    CHECK(escaping.collectCrittersEscaped() == 0);
 
     // Kill: a critter with no hit points pays getReward() coins and is removed.
     CritterGroupGenerator killed(2);
@@ -367,6 +373,7 @@ void testWaveCoins() {
     CHECK(killed.activeCrittersLeft() == 0);
     CHECK(killed.collectCoinsEarned() == reward);
     CHECK(killed.collectCoinsStolen() == 0);
+    CHECK(killed.collectCrittersEscaped() == 0);  // a kill is not an escape
 
     // A critter killed right next to the exit pays its reward and never steals,
     // even if this frame's movement would have carried it onto the exit.
@@ -384,6 +391,59 @@ void testWaveCoins() {
     lastSecond.moveAlongPath(path, 10.f);  // a huge step that would pass the exit
     CHECK(lastSecond.collectCoinsStolen() == 0);
     CHECK(lastSecond.collectCoinsEarned() == nearExitReward);
+    CHECK(lastSecond.collectCrittersEscaped() == 0);
+}
+
+/**
+ * @brief Counts update() calls so the test can see that the tower notifies.
+ */
+class CountingObserver : public Observer {
+public:
+    int updates = 0;
+    Observable* last = nullptr;
+
+    void update(Observable* subject) override {
+        ++updates;
+        last = subject;
+    }
+};
+
+void testTowerObserver() {
+    std::cout << "\n[Tower observer] A change notifies the observer, which redisplays the view\n";
+    DirectDamageTower tower(1, 4);
+    CountingObserver counter;
+    tower.attach(&counter);
+    tower.attach(&counter);  // plugging twice does not add a second observer
+    CHECK(tower.getObserverCount() == 1);
+
+    CHECK(tower.upgrade());
+    CHECK(counter.updates == 1);
+    CHECK(counter.last == &tower);
+    Tower* seen = dynamic_cast<Tower*>(counter.last);
+    CHECK(seen != nullptr && seen->getLevel() == 2);
+
+    CHECK(tower.upgrade());
+    CHECK(counter.updates == 2);
+    seen = dynamic_cast<Tower*>(counter.last);
+    CHECK(seen != nullptr && seen->getLevel() == 3);
+
+    CHECK(!tower.upgrade());  // already at max: nothing changed, so no notify
+    CHECK(counter.updates == 2);
+
+    tower.detach(&counter);
+    CHECK(tower.getObserverCount() == 0);
+
+    // The driver plugs a TowerObserver in and upgrades twice. Each upgrade
+    // prints one tower view, so both new levels show up in the output.
+    std::ostringstream shown;
+    TowerObserverDriver driver;
+    driver.run(shown);
+    const std::string view = shown.str();
+    CHECK(view.find("Level: 2/3") != std::string::npos);
+    CHECK(view.find("Level: 3/3") != std::string::npos);
+    CHECK(view.find("Type: Direct") != std::string::npos);
+    CHECK(view.find("Cell: (1, 4)") != std::string::npos);
+    CHECK(view.find("Level: 1/3") == std::string::npos);  // the view is only redrawn after a change
 }
 
 void testWaveEnds() {
@@ -415,6 +475,7 @@ int main() {
     testTowerSelling();
     testTowerTargeting();
     testTowerTypes();
+    testTowerObserver();
 
     testCritterStats();
     testCritterDamage();

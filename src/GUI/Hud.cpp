@@ -30,6 +30,18 @@ int Hud::getMapCols() const { return mapCols; }
 void Hud::setGold(int g) { gold = g; }
 int Hud::getGold() const { return gold; }
 
+void Hud::refillHealth() { healthHalves = kHeartsPerWave * 2; }
+
+void Hud::loseHalfHearts(int escapes) {
+    if (escapes <= 0) {
+        return;
+    }
+    healthHalves = std::max(0, healthHalves - escapes);
+}
+
+int Hud::getHealthHalves() const { return healthHalves; }
+bool Hud::isDefeated() const { return healthHalves <= 0; }
+
 ShopSelection Hud::getShopSelection() const { return shopSelection; }
 void Hud::clearShopSelection() { shopSelection = ShopSelection::None; }
 
@@ -54,6 +66,33 @@ int Hud::priceOf(ShopSelection item) {
 void Hud::drawLabel(sf::RenderWindow& window, const std::string& text,
                     float x, float y, float scale, sf::Color color) const {
     SimpleText::draw(window, text, x, y, scale, color);
+}
+
+void Hud::drawHeart(sf::RenderWindow& window, float x, float y, float scale, int halves) const {
+    // 7x6 bitmap, same block pixels as SimpleText. '#' is part of the heart.
+    static const char* rows[6] = {
+        ".##.##.",
+        "#######",
+        "#######",
+        ".#####.",
+        "..###..",
+        "...#...",
+    };
+    const sf::Color filled(235, 80, 70);
+    const sf::Color empty(58, 46, 54);
+    sf::RectangleShape pixel(sf::Vector2f(scale, scale));
+    for (int row = 0; row < 6; ++row) {
+        for (int col = 0; col < 7; ++col) {
+            if (rows[row][col] != '#') {
+                continue;
+            }
+            const bool on = halves >= 2 || (halves == 1 && col <= 3);
+            pixel.setFillColor(on ? filled : empty);
+            pixel.setPosition(x + static_cast<float>(col) * scale,
+                              y + static_cast<float>(row) * scale);
+            window.draw(pixel);
+        }
+    }
 }
 
 void Hud::drawButton(sf::RenderWindow& window, sf::FloatRect rect,
@@ -173,7 +212,28 @@ void Hud::drawPlayHud(sf::RenderWindow& window, const Tower* selected) const {
     drawLabel(window, "WAVE", x + 160.f, y, 2.f, sf::Color(160, 175, 195));
     drawLabel(window, std::to_string(wave), x + 160.f, y + 24.f, 3.f,
               sf::Color(230, 120, 230));
-    y += 70.f;
+    y += 52.f;
+
+    // One short row under gold/wave: label, pixel hearts, then the number.
+    // Kept clear of the shop buttons below.
+    drawLabel(window, "HEALTH", x + 18.f, y + 2.f, 2.f, sf::Color(160, 175, 195));
+    const float heartScale = 3.f;
+    const float heartW = 7.f * heartScale;
+    const float heartGap = 6.f;
+    const float heartsX = x + 18.f + 6.f * 6.f * 2.f + 10.f;
+    for (int i = 0; i < kHeartsPerWave; ++i) {
+        const int have = healthHalves - i * 2;
+        const int fill = have >= 2 ? 2 : (have == 1 ? 1 : 0);
+        drawHeart(window, heartsX + i * (heartW + heartGap), y, heartScale, fill);
+    }
+    const int wholeHearts = healthHalves / 2;
+    const std::string healthText = (healthHalves % 2 == 0)
+                                        ? std::to_string(wholeHearts)
+                                        : (std::to_string(wholeHearts) + ".5");
+    drawLabel(window, healthText,
+              heartsX + kHeartsPerWave * (heartW + heartGap) + 4.f,
+              y + 2.f, 2.f, sf::Color(235, 90, 100));
+    y += 32.f;
 
     drawLabel(window, "SHOP", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
     y += 22.f;
@@ -282,6 +342,53 @@ std::string Hud::handlePlayClick(sf::Vector2f pos, const Tower* selected) {
     }
     if (contains(playFullscreenBtn, pos)) {
         return "toggle_fullscreen";
+    }
+    return "none";
+}
+
+void Hud::drawGameOver(sf::RenderWindow& window, int wave) const {
+    const float w = static_cast<float>(window.getSize().x);
+    const float h = static_cast<float>(window.getSize().y);
+
+    sf::RectangleShape bg(sf::Vector2f(w, h));
+    bg.setFillColor(sf::Color(18, 24, 32));
+    window.draw(bg);
+
+    sf::RectangleShape panel(sf::Vector2f(480.f, 360.f));
+    panel.setPosition((w - 480.f) * 0.5f, (h - 360.f) * 0.5f);
+    panel.setFillColor(sf::Color(28, 38, 52));
+    panel.setOutlineThickness(2.f);
+    panel.setOutlineColor(sf::Color(70, 110, 150));
+    window.draw(panel);
+
+    const float px = panel.getPosition().x;
+    const float py = panel.getPosition().y;
+    const auto centerX = [&](const std::string& text, float scale) {
+        const float textW = static_cast<float>(text.size()) * 6.f * scale;
+        return px + (480.f - textW) * 0.5f;
+    };
+
+    drawLabel(window, "GAME OVER", centerX("GAME OVER", 3.f), py + 36.f, 3.f,
+              sf::Color(235, 80, 70));
+    drawLabel(window, "NO HEARTS LEFT", centerX("NO HEARTS LEFT", 2.f), py + 90.f, 2.f,
+              sf::Color(220, 225, 235));
+    const std::string waveLine = "WAVE " + std::to_string(wave);
+    drawLabel(window, waveLine, centerX(waveLine, 2.5f), py + 130.f, 2.5f,
+              sf::Color(230, 120, 230));
+
+    gameOverAgainBtn = makeRect(px + 90.f, py + 190.f, 300.f, 52.f);
+    drawButton(window, gameOverAgainBtn, "PLAY AGAIN", sf::Color(40, 130, 90));
+
+    gameOverMenuBtn = makeRect(px + 90.f, py + 260.f, 300.f, 52.f);
+    drawButton(window, gameOverMenuBtn, "MAIN MENU", sf::Color(50, 70, 95));
+}
+
+std::string Hud::handleGameOverClick(sf::Vector2f pos) const {
+    if (contains(gameOverAgainBtn, pos)) {
+        return "again";
+    }
+    if (contains(gameOverMenuBtn, pos)) {
+        return "menu";
     }
     return "none";
 }
