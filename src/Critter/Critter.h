@@ -8,6 +8,8 @@
 #ifndef Critter_h
 #define Critter_h
 
+#include "../Observer/Observable.h"
+
 /** @brief Kind of critter; some towers deal bonus damage to certain kinds. */
 enum class CritterKind {
     Normal,  ///< No special resistances or weaknesses.
@@ -22,7 +24,7 @@ enum class CritterKind {
  * reward (proportional to its level). If it reaches the exit first, it steals
  * coins according to its strength.
  */
-class Critter {
+class Critter : public Observable {
 public:
     /**
      * @param kind      Critter kind (affects speed and some tower bonuses).
