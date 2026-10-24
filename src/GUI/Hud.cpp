@@ -120,8 +120,8 @@ void Hud::drawStartMenu(sf::RenderWindow& window) const {
     bg.setFillColor(sf::Color(18, 24, 32));
     window.draw(bg);
 
-    sf::RectangleShape panel(sf::Vector2f(480.f, 480.f));
-    panel.setPosition((w - 480.f) * 0.5f, (h - 480.f) * 0.5f);
+    sf::RectangleShape panel(sf::Vector2f(480.f, 540.f));
+    panel.setPosition((w - 480.f) * 0.5f, (h - 540.f) * 0.5f);
     panel.setFillColor(sf::Color(28, 38, 52));
     panel.setOutlineThickness(2.f);
     panel.setOutlineColor(sf::Color(70, 110, 150));
@@ -163,6 +163,10 @@ void Hud::drawStartMenu(sf::RenderWindow& window) const {
     // Opens the screen that shows which maps Map::isValid() accepts and rejects.
     mapDemoBtn = makeRect(px + 90.f, py + 410.f, 300.f, 44.f);
     drawButton(window, mapDemoBtn, "MAP RULES DEMO", sf::Color(50, 70, 95));
+
+    // Opens the Part 2 driver: a map with a MapObserver that redraws on every change.
+    mapObserverDemoBtn = makeRect(px + 90.f, py + 470.f, 300.f, 44.f);
+    drawButton(window, mapObserverDemoBtn, "MAP OBSERVER DEMO", sf::Color(50, 70, 95));
 }
 
 bool Hud::handleStartClick(sf::Vector2f pos) {
@@ -471,4 +475,8 @@ std::string Hud::handleMapDemoClick(sf::Vector2f pos) const {
         return "back";
     }
     return "none";
+}
+
+bool Hud::clickedMapObserverDemo(sf::Vector2f pos) const {
+    return contains(mapObserverDemoBtn, pos);
 }

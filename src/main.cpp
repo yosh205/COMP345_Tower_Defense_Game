@@ -13,6 +13,7 @@
 #include <iostream>
 
 #include "GUI/Hud.h"
+#include "GUI/MapObserverDriver.h"
 #include "GUI/MapView.h"
 #include "GUI/TowerView.h"
 #include "GUI/CritterView.h"
@@ -302,6 +303,11 @@ int main() {
                 if (event.type == sf::Event::MouseButtonPressed &&
                     event.mouseButton.button == sf::Mouse::Left) {
                     // Start-menu fullscreen toggle may change preference only.
+                    if (hud.clickedMapObserverDemo(mouseF)) {
+                        MapObserverDriver driver;
+                        driver.run();  // opens its own window; the menu continues when it is closed
+                        continue;
+                    }
                     if (hud.clickedMapDemo(mouseF)) {
                         state = AppState::MapDemo;
                         exampleIndex = 0;
