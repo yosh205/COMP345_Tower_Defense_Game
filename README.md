@@ -1,5 +1,6 @@
 # COMP345_Tower_Defense_Game
-Assignment #1 for Concordia University course COMP 345
+Assignments #1 and #2 for Concordia University course COMP 345.
+Assignment 2 adds the Observer pattern to the map, towers and critters (see *Observer pattern* below).
 
 ## Team Members
 
@@ -58,8 +59,8 @@ few minutes; after a code change only `cmake --build build -j` is needed.
 ### Running the tests
 
 `tests/tests.cpp` checks the game rules of the map, towers, critters and waves,
-including the tower observer
-(106 checks). It is a separate program and does not need SFML or a screen.
+including the tower and map observers
+(135 checks). It is a separate program and does not need SFML or a screen.
 
 ```bash
 # With CMake (after building as above)
@@ -90,6 +91,11 @@ Everything is in-game menus (no console prompts):
 1. **Start screen** — set rows/columns, optional fullscreen, click **Start Game**.
    **Map Rules Demo** shows seven hand-built maps (one valid, six that each break one map
    rule) with the result of `Map::isValid()`; use Prev/Next or the arrow keys, Esc to go back.
+   **Map Observer Demo** opens a window with a `MapObserver` attached to a map. Each key
+   changes the map and the observer redraws it (the console counts the updates):
+   **P** place a tower, **M** move it, **R** remove it, **C** switch a cell between scenery
+   and path, **N** assign a new map, **Esc** go back. A change that is not allowed
+   (e.g. placing a second tower on the same cell) leaves the map unchanged and causes no update.
 2. **Shop** (right panel) — click Direct / Area / Slow, then click a green scenery cell to place
 3. **Select tower** — click it on the map to see its range and stats, **Upgrade** / **Sell**
 4. **Start Wave** — sidebar button; critters enter one per second. While a wave runs the
@@ -160,6 +166,7 @@ COMP 345 Assignment 1 specification [3]; the numbers are the values used in the 
 1. "Tower defense", *Wikipedia*. https://en.wikipedia.org/wiki/Tower_defense
 2. "Bloons TD", *Wikipedia*. https://en.wikipedia.org/wiki/Bloons_TD
 3. COMP 345 Fall 2026, *Assignment #1* specification (Parts 1–3), Concordia University.
+4. COMP 345 Fall 2026, *Assignment #2* specification (Observer pattern, Parts 1–3), Concordia University.
 
 ## Design
 
@@ -168,12 +175,12 @@ without a window (see `tests/tests.cpp`).
 
 | Folder | Classes | Responsibility |
 |---|---|---|
-| `src/Map` | `Map`, `generateRandomMap()`, `makeMapExamples()` | Grid of cells, setters, validity check, entry-to-exit path (breadth-first search); example valid/invalid maps for the demo |
+| `src/Map` | `Map`, `generateRandomMap()`, `makeMapExamples()` | Grid of cells, setters, tower placement, validity check, entry-to-exit path (breadth-first search); example valid/invalid maps for the demo. `Map` is an Observable |
 | `src/Tower` | `Tower` (abstract), `DirectDamageTower`, `AreaDamageTower`, `SlowingTower`, `TowerObserver`, `TowerObserverDriver` | Costs, levels, upgrade/sell, detect → select → shoot. Subclasses only change the shot's effect (`fireAt()`). `Tower` is an Observable; `TowerObserverDriver` plugs in a `TowerObserver` and upgrades the tower so the view is printed again after each change |
 | `src/Observer` | `Observable`, `Observer` | Subject/observer base. `attach` / `detach` / `notify` |
 | `src/Critter` | `Critter`, `CritterGroupGenerator` | Critter stats and effects; creating a wave, spawning, moving along the path, rewards and theft |
-| `src/GUI` | `MapView`, `TowerView`, `CritterView`, `Hud` | Drawing with SFML and the menus/sidebar. Views only read the game objects |
-| `src/main.cpp` | — | Driver: start menu, then each frame spawn → move → pay coins and hearts → towers shoot → draw. At 0 hearts, the game over screen |
+| `src/GUI` | `MapView`, `TowerView`, `CritterView`, `Hud`, `MapObserver`, `MapObserverDriver` | Drawing with SFML and the menus/sidebar. Views only read the game objects. `MapObserver` redraws the map in a window on every change; `MapObserverDriver` is the Map Observer Demo |
+| `src/main.cpp` | — | Driver: runs the tower observer driver in the console, then the start menu, then each frame spawn → move → pay coins and hearts → towers shoot → draw. At 0 hearts, the game over screen |
 
 ```
                  Tower (abstract)
@@ -184,6 +191,41 @@ without a window (see `tests/tests.cpp`).
                                  ▲                      ▲
    main.cpp (game loop) ─────────┴── Tower::update() ───┘ (damage / slow)
 ```
+
+## Observer pattern (Assignment 2)
+
+Each part follows Model-View-Controller with the Observer pattern from the course
+slides. The model is an `Observable`; the view is an `Observer` that shows the model
+again each time `update()` is called; the controller (a driver or the game) changes the model.
+
+```
+   Observable                         Observer
+   + attach(Observer*)                + update(Observable*) = 0
+   + detach(Observer*)                        ▲
+   # notify()  ── calls update() ──►          │
+        ▲                                     │
+   Map, Tower, (Critter)          MapObserver, TowerObserver, (CritterObserver)
+```
+
+- **`attach` / `detach`**: `attach` ignores `nullptr` and an observer that is already
+  attached. `notify()` loops over a copy of the list, so an observer can detach itself
+  during `update()`.
+- **Notify only on a real change.** A setter that is refused or leaves the state the same
+  does not notify, so the view is redrawn exactly once per change.
+- **Copying.** A copied subject starts with no observers (the observers were watching the
+  original). Assigning into a subject keeps its own observers and notifies them, because
+  its whole state changed.
+- **Observer lifetime.** `MapObserver` attaches in its constructor and detaches in its
+  destructor (like `DigitalClock` in the slides), and cannot be copied. The subject is
+  created before the observer so it outlives it.
+
+| Part | Model (Observable) | View (Observer) | Notifies on | Driver |
+|---|---|---|---|---|
+| 1 — Tower | `Tower` | `TowerObserver`: prints the tower's type, cell, level, range, power, rate of fire and refund value | `upgrade()` | `TowerObserverDriver`, run in the console when the game starts |
+| 2 — Map | `Map` | `MapObserver`: redraws the map and its towers in a window | `setCell()`, `placeTower()`, `moveTower()`, `removeTower()`, `operator=` | `MapObserverDriver`: **Map Observer Demo** button on the start screen |
+
+`tests/tests.cpp` checks that each change notifies the observer exactly once, that
+refused changes and detached observers get no update, and that copies start with no observers.
 
 ## Tools and Libraries
 
