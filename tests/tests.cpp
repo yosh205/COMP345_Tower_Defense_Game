@@ -446,6 +446,58 @@ void testTowerObserver() {
     CHECK(view.find("Level: 1/3") == std::string::npos);  // the view is only redrawn after a change
 }
 
+void testMapObserver() {
+    std::cout << "\n[Map observer] Each change to the map notifies the observer once\n";
+    Map map = makeStraightMap();
+    CountingObserver counter;
+    map.attach(&counter);
+    CHECK(map.getObserverCount() == 1);
+
+    CHECK(map.setCell(2, 2, CellType::Path));
+    CHECK(counter.updates == 1);
+    CHECK(counter.last == &map);
+    CHECK(map.setCell(2, 2, CellType::Path));  // same type again: nothing changed, so no notify
+    CHECK(counter.updates == 1);
+    CHECK(!map.setCell(9, 9, CellType::Path));  // out of bounds: no notify
+    CHECK(counter.updates == 1);
+
+    CHECK(map.placeTower(0, 0));
+    CHECK(counter.updates == 2);
+    CHECK(!map.placeTower(0, 0));  // already a tower there
+    CHECK(!map.placeTower(1, 1));  // path cell
+    CHECK(counter.updates == 2);
+
+    CHECK(map.moveTower(0, 0, 0, 4));  // one move is one change
+    CHECK(counter.updates == 3);
+    CHECK(!map.hasTower(0, 0) && map.hasTower(0, 4));
+    CHECK(!map.moveTower(0, 0, 0, 3));  // no tower to move
+    CHECK(counter.updates == 3);
+
+    CHECK(map.removeTower(0, 4));
+    CHECK(counter.updates == 4);
+    CHECK(!map.removeTower(0, 4));
+    CHECK(counter.updates == 4);
+
+    // Assigning a new map changes the whole map: the observer stays attached and is told.
+    map = Map(3, 5);
+    CHECK(counter.updates == 5);
+    CHECK(map.getObserverCount() == 1);
+    Map& same = map;
+    map = same;  // assigning a map to itself changes nothing
+    CHECK(counter.updates == 5);
+
+    // A copy is a new subject: it starts with no observers.
+    Map copy(map);
+    CHECK(copy.getObserverCount() == 0);
+    copy.setCell(0, 0, CellType::Path);
+    CHECK(counter.updates == 5);
+
+    map.detach(&counter);
+    CHECK(map.getObserverCount() == 0);
+    map.setCell(0, 0, CellType::Path);
+    CHECK(counter.updates == 5);
+}
+
 void testWaveEnds() {
     std::cout << "\n[Critter waves] The wave is over once every critter is killed or escaped\n";
     const std::vector<Position> path = makeStraightMap().findPath();
@@ -476,6 +528,7 @@ int main() {
     testTowerTargeting();
     testTowerTypes();
     testTowerObserver();
+    testMapObserver();
 
     testCritterStats();
     testCritterDamage();
