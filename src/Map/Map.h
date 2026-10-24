@@ -49,6 +49,22 @@ public:
      */
     Map(int length, int width);
 
+    /**
+     * @brief Creates a copy of other's cells and towers. The copy starts with
+     * no observers.
+     * @param other The map to copy.
+     */
+    Map(const Map& other) = default;
+
+    /**
+     * @brief Replaces this map's contents with a copy of other, then notifies observers.
+     * 
+     * This map keeps its own observers and they are told that the whole map changed.
+     * @param other The map to copy.
+     * @return This map.
+     */
+    Map& operator=(const Map& other);
+
 // --- Getters ---
     /** @return Number of rows in the map. */
     int getLength() const;

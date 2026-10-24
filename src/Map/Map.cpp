@@ -33,6 +33,18 @@ Map::Map(int length, int width) : length(length), width(width) {
     towers = std::vector<std::vector<bool>>(length, std::vector<bool>(width, false));
 }
 
+Map& Map::operator=(const Map& other) {
+    if (this != &other) { // assigning a map to itself does nothing
+        Observable::operator=(other); // keeps this map's own observers
+        length = other.length;
+        width = other.width;
+        grid = other.grid;
+        towers = other.towers;
+        notify(); // the whole map changed: observers redraw
+    }
+    return *this;
+}
+
 // --- Getters ---
 
 int Map::getLength() const { return length; }
