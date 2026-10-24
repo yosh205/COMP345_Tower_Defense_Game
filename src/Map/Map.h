@@ -13,6 +13,7 @@
 #define Map_h
 
 #include <vector>
+#include "../Observer/Observable.h"
 
 /** @brief What a single cell on the map contains. */
 enum class CellType {
@@ -35,8 +36,9 @@ struct Position {
  * the path, entry and exit, then call isValid() to check that the map
  * follows the rules. Cells are addressed as (row, col), where row is in
  * [0, getLength()) and col is in [0, getWidth()).
+ * Map is Observable: every change to a cell calls notify() so observers can update their view of the map.
  */
-class Map {
+class Map : public Observable {
 public:
 
 // --- Construction ---
@@ -46,6 +48,22 @@ public:
      * @param width  Number of columns. Must be greater than 0.
      */
     Map(int length, int width);
+
+    /**
+     * @brief Creates a copy of other's cells and towers. The copy starts with
+     * no observers.
+     * @param other The map to copy.
+     */
+    Map(const Map& other) = default;
+
+    /**
+     * @brief Replaces this map's contents with a copy of other, then notifies observers.
+     * 
+     * This map keeps its own observers and they are told that the whole map changed.
+     * @param other The map to copy.
+     * @return This map.
+     */
+    Map& operator=(const Map& other);
 
 // --- Getters ---
     /** @return Number of rows in the map. */
@@ -70,6 +88,8 @@ public:
      * Any cell can be set to any type. This function does not enforce the
      * one-entry/one-exit rule, so a map may be temporarily invalid while it
      * is being built; use isValid() to check it afterwards.
+     * Notifies observers if the cell was changed. Setting a cell to a
+     * non-scenery type removes any tower standing on it.
      * @param row  Row index of the cell.
      * @param col  Column index of the cell.
      * @param type The new type for the cell.
@@ -90,7 +110,7 @@ public:
      * @brief Checks whether a tower may be placed at (row, col).
      * @param row Row index of the cell.
      * @param col Column index of the cell.
-     * @return true if the cell is in bounds and is Scenery.
+     * @return true if the cell is in bounds, is Scenery and has no tower yet.
      */
     bool canPlaceTower(int row, int col) const;
 
@@ -101,6 +121,40 @@ public:
      * @return true if the cell is in bounds and is Path, Entry or Exit.
      */
     bool isWalkable(int row, int col) const;
+
+// --- Towers on the map ---
+    /**
+     * @brief Records a tower on (row, col) and notifies observers.
+     * @param row Row of the cell.
+     * @param col Column of the cell.
+     * @return true if placed; false if canPlaceTower(row, col) is false.
+     */
+    bool placeTower(int row, int col);
+
+    /**
+     * @brief Removes a tower on (row, col) and notifies observers.
+     * @param row Row of the cell.
+     * @param col Column of the cell.
+     * @return true if there was a tower there.
+     */
+    bool removeTower(int row, int col);
+
+    /**
+     * @brief Moves a tower to another free scenery cell and notfies observers once.
+     * @param fromRow Row of the tower to move.
+     * @param fromCol Column of the tower to move.
+     * @param toRow Row of the new cell.
+     * @param toCol Column of the new cell.
+     * @return true if moved; false if there is no tower at the start or the destination is not free.
+     */
+    bool moveTower(int fromRow, int fromCol, int toRow, int toCol);
+
+    /**
+     * @param row Row of the cell.
+     * @param col Column of the cell.
+     * @return true if a tower stands on (row, col).
+     */
+    bool hasTower(int row, int col) const;
 
 // --- Validation ---
     /**
@@ -127,6 +181,7 @@ private:
     int length;                              ///< Number of rows.
     int width;                               ///< Number of columns.
     std::vector<std::vector<CellType>> grid; ///< Cells, accessed as grid[row][col].
+    std::vector<std::vector<bool>> towers; ///< towers[row][col] is true where a tower stands.
 };
 
 #endif // Map_h

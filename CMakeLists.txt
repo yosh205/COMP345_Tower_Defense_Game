@@ -43,6 +43,8 @@ add_executable(towerdefense
     src/Tower/TowerObserver.cpp
     src/Tower/TowerObserverDriver.cpp
     src/Observer/Observable.cpp
+    src/GUI/MapObserver.cpp
+    src/GUI/MapObserverDriver.cpp
 )
 
 target_include_directories(towerdefense PRIVATE src)
