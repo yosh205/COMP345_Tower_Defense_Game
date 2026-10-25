@@ -6,8 +6,11 @@
 #define CritterObserver_h
 
 #include <iosfwd>
+#include <vector>
 
+#include "../GUI/MapView.h"
 #include "../Observer/Observer.h"
+#include "Critter.h"
 
 class Observable;
 
@@ -38,7 +41,7 @@ public:
      * If it was already watching something else, it detaches from that first.
      * @param subject The critter to watch.
      */
-    void plugInto(Observable& subject);
+    void plugInto(Critter& critter);
 
     /**
      * @brief Redraws the critter view. Called by the critter after a change.
@@ -46,9 +49,36 @@ public:
      */
     void update(Observable* subject) override;
 
+    /*
+    Shows critters in a window (drawn on map)
+    */
+
+    void showOn(sf::RenderWindow& window, const Map& map);
+
+    /*
+    * Draws the window view
+    */
+    void render();
+
 private:
-    std::ostream& out;                  ///< Where the view is written.
-    Observable* subject = nullptr;      ///< Critter being watched, or nullptr.
+
+    /*Draws one critter on the window*/
+    void drawCritter(const Critter¦ critter, float cellSize, float originX, float originY);
+
+    std::ostream& out;                  // Where the view is written.
+   /* Observable* subject = nullptr;      // Critter being watched, or nullptr.*/
+    std::vector<Critter*> observedCritters;
+
+    sf::RenderWindow window = nullptr;
+    const Map* map = nullptr;
+    MapView mapView
+
+        /*
+        * This method allows us to retrieve the CritterKind of the the Critter observed by CritterObserver
+        */
+    static const char* kindString(CritterKind k) {}
 };
+
+
 
 #endif // CritterObserver_h
