@@ -1,6 +1,6 @@
 /**
  * @file CritterObserver.h
- * @brief Observer that redisplays a Critter when it changes.
+ * @brief Observer that redisplays critters whenever one of them changes.
  */
 #ifndef CritterObserver_h
 #define CritterObserver_h
@@ -8,20 +8,26 @@
 #include <iosfwd>
 #include <vector>
 
-#include "../GUI/MapView.h"
+#include <SFML/Graphics.hpp>
+
 #include "../GUI/CritterView.h"
+#include "../GUI/MapView.h"
+#include "../Map/Map.h"
 #include "../Observer/Observer.h"
 #include "Critter.h"
 
 class Observable;
 
 /**
- * @brief Displays a critter's view when the critter notifies it.
-
- * Plug one into a critter with plugInto(). Each time the critter changes a value
- * (for example takeDamage()), Observable::notify() calls update(), which prints
- * the critter's kind, health, speed, damage and position.
- * The observer does not own the critter. It detaches itself when destroyed.
+ * @brief Displays the critter view when a watched critter notifies it.
+ *
+ * Plug critters in with plugInto() and remove them with unplug(). Each add or
+ * remove redraws the view. Afterwards, every change on a watched critter
+ * (damage, slow, position) calls Observable::notify(), which calls update()
+ * and redraws again. The view is printed to a stream and, once showOn() has
+ * been called, drawn on that window over the map.
+ * The observer does not own the critters. It detaches itself when destroyed,
+ * so the critters must still be alive at that moment.
  */
 class CritterObserver : public Observer {
 public:
@@ -31,59 +37,56 @@ public:
      */
     explicit CritterObserver(std::ostream& out);
 
-    /** @brief Stops watching, if this observer was plugged into a critter. */
+    /** @brief Stops watching every critter this observer was plugged into. */
     ~CritterObserver() override;
 
     CritterObserver(const CritterObserver&) = delete;
-    CritterObserver& operator = (const CritterObserver&) = delete;
+    CritterObserver& operator=(const CritterObserver&) = delete;
 
     /**
-     * @brief attaches this observer to a critter (or any Observable).
-     * If it was already watching something else, it detaches from that first.
-     * @param subject The critter to watch.
+     * @brief Draws the watched critters in window, on top of map.
+     * Does not attach to the map: the map is only the background.
+     * @param window The window to draw into.
+     * @param map    The map the critters are standing on.
+     */
+    void showOn(sf::RenderWindow& window, const Map& map);
+
+    /**
+     * @brief Starts watching critter and redisplays the view.
+     * Attaching the same critter twice has no effect.
+     * @param critter The critter to watch.
      */
     void plugInto(Critter& critter);
 
-    /*Detaches this observer from a critter*/
-
+    /**
+     * @brief Stops watching critter and redisplays the view.
+     * Does nothing if this observer was not watching it.
+     * @param critter The critter to stop watching.
+     */
     void unplug(Critter& critter);
 
     /**
-     * @brief Redraws the critter view. Called by the critter after a change.
-     * @param subject The critter that changed. Ignored if it is not a Critter.
+     * @brief Redraws the critter view. Called by a critter after a change.
+     * @param subject The critter that changed. Ignored if it is not one of the watched critters.
      */
     void update(Observable* subject) override;
 
-    /*
-    Shows critters in a window (drawn on map)
-    */
-
-    void showOn(sf::RenderWindow& window, const Map& map);
-
-    /*
-    * Draws the window view
-    */
+    /** @brief Draws the map and every watched critter. Does nothing until showOn(). */
     void render();
 
+    /** @return How many critters are currently plugged in. */
+    int getWatchedCount() const;
+
 private:
+    /** @brief Writes one critter's kind, health, speed and position to out. */
+    void printView(const Critter& critter, const char* event);
 
-    /*Draws one critter on the window*/
-    void drawCritter(const Critter& critter, float cellSize, float originX, float originY);
-
-    std::ostream& out;                  // Where the view is written.
-   /* Observable* subject = nullptr;      // Critter being watched, or nullptr.*/
-    std::vector<Critter*> observedCritters;
-
-    sf::RenderWindow window = nullptr;
-    const Map* map = nullptr;
-    MapView mapView
-
-        /*
-        * This method allows us to retrieve the CritterKind of the the Critter observed by CritterObserver
-        */
-    //static const char* kindString(CritterKind k) {}
+    std::ostream& out;                       ///< Where the text view is written.
+    std::vector<Critter*> observedCritters;  ///< Critters being watched (not owned).
+    sf::RenderWindow* window = nullptr;      ///< Window from showOn(), or nullptr.
+    const Map* map = nullptr;                ///< Map from showOn(), or nullptr.
+    MapView mapView{40.f};                   ///< Draws the map behind the critters.
+    CritterView critterView;                 ///< Draws each watched critter.
 };
-
-
 
 #endif // CritterObserver_h

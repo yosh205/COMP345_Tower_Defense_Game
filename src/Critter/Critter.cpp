@@ -57,7 +57,10 @@ void Critter::setPosition(float row, float col) {
 }
 
 int Critter::getPathIndex() const { return pathIndex; }
-void Critter::setPathIndex(int index) { pathIndex = index; notify(); } // do we need to notify here?
+void Critter::setPathIndex(int index) {
+    pathIndex = index;
+    notify();
+}
 
 void Critter::takeDamage(int amount) {
     if (amount <= 0) {

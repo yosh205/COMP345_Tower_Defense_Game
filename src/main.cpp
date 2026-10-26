@@ -27,6 +27,7 @@
 #include "Tower/TowerObserverDriver.h"
 #include "Critter/Critter.h"
 #include "Critter/CritterGroupGenerator.h"
+#include "Critter/CritterObserverDriver.h"
 namespace {
 
 enum class AppState { StartMenu, MapDemo, Playing, GameOver };
@@ -305,6 +306,11 @@ int main() {
                     // Start-menu fullscreen toggle may change preference only.
                     if (hud.clickedMapObserverDemo(mouseF)) {
                         MapObserverDriver driver;
+                        driver.run();  // opens its own window; the menu continues when it is closed
+                        continue;
+                    }
+                    if (hud.clickedCritterObserverDemo(mouseF)) {
+                        CritterObserverDriver driver;
                         driver.run();  // opens its own window; the menu continues when it is closed
                         continue;
                     }

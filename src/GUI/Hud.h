@@ -76,6 +76,13 @@ public:
      */
     bool clickedMapObserverDemo(sf::Vector2f pos) const;
 
+    /**
+     * @brief Checks whether a start-menu click hit the Critter Observer Demo button.
+     * @param pos Mouse position in window pixels.
+     * @return true if the player clicked Critter Observer Demo.
+     */
+    bool clickedCritterObserverDemo(sf::Vector2f pos) const;
+
     // --- Map rules demo ---
     /**
      * @brief Draws the demo sidebar: the example's name, the result of
@@ -238,6 +245,7 @@ private:
     mutable sf::FloatRect fullscreenBtn;      ///< Start menu: fullscreen on/off button.
     mutable sf::FloatRect mapDemoBtn;         ///< Start menu: Map Rules Demo button.
     mutable sf::FloatRect mapObserverDemoBtn; ///< Start menu: Map Observer Demo button.
+    mutable sf::FloatRect critterObserverDemoBtn; ///< Start menu: Critter Observer Demo button.
 
     mutable sf::FloatRect demoPrevBtn;        ///< Map demo: previous example.
     mutable sf::FloatRect demoNextBtn;        ///< Map demo: next example.

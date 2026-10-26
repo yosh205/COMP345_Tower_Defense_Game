@@ -498,6 +498,36 @@ void testMapObserver() {
     CHECK(counter.updates == 5);
 }
 
+void testCritterObserver() {
+    std::cout << "\n[Critter observer] A change notifies the observer, which can redisplay the view\n";
+    Critter critter(CritterKind::Normal, 30, 1.f, 1, 2);
+    CountingObserver counter;
+    critter.attach(&counter);
+    critter.attach(&counter);  // plugging twice does not add a second observer
+    CHECK(critter.getObserverCount() == 1);
+
+    critter.takeDamage(5);
+    CHECK(counter.updates == 1);
+    CHECK(counter.last == &critter);
+    Critter* seen = dynamic_cast<Critter*>(counter.last);
+    CHECK(seen != nullptr && seen->getHitPoints() == 25);
+
+    critter.takeDamage(0);  // no damage: nothing changed, so no notify
+    CHECK(counter.updates == 1);
+
+    critter.setPosition(1.f, 3.f);
+    CHECK(counter.updates == 2);
+    CHECK(critter.getCol() == 3.f);
+
+    critter.applySlow(0.5f, 1.f);
+    CHECK(counter.updates == 3);
+
+    critter.detach(&counter);
+    CHECK(critter.getObserverCount() == 0);
+    critter.takeDamage(5);
+    CHECK(counter.updates == 3);
+}
+
 void testWaveEnds() {
     std::cout << "\n[Critter waves] The wave is over once every critter is killed or escaped\n";
     const std::vector<Position> path = makeStraightMap().findPath();
@@ -529,6 +559,7 @@ int main() {
     testTowerTypes();
     testTowerObserver();
     testMapObserver();
+    testCritterObserver();
 
     testCritterStats();
     testCritterDamage();
