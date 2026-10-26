@@ -47,21 +47,24 @@ float Critter::getCol() const { return col; }
 float Critter::getProgress() { return progress; }
 void Critter::addProgress(float cellsMoved) {
     this->progress += cellsMoved;
+    notify();
 }
 
 void Critter::setPosition(float row, float col) {
     this->row = row;
     this->col = col;
+    notify();
 }
 
 int Critter::getPathIndex() const { return pathIndex; }
-void Critter::setPathIndex(int index) { pathIndex = index; }
+void Critter::setPathIndex(int index) { pathIndex = index; notify(); } // do we need to notify here?
 
 void Critter::takeDamage(int amount) {
     if (amount <= 0) {
         return;
     }
     hitPoints = std::max(0, hitPoints - amount);
+    notify();
 }
 
 void Critter::applySlow(float factor, float durationSeconds) {
@@ -73,6 +76,7 @@ void Critter::applySlow(float factor, float durationSeconds) {
         slowFactor = factor;
     }
     slowTimeLeft = durationSeconds;
+    notify();
 }
 
 void Critter::updateEffects(float dt) {
@@ -85,6 +89,7 @@ void Critter::updateEffects(float dt) {
         slowTimeLeft = 0.f;
         slowFactor = 1.f;
     }
+    notify();
 }
 
 float Critter::distanceTo(int row, int col) const {

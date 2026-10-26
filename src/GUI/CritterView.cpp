@@ -21,7 +21,7 @@ sf::Color CritterView::getColorForKind(CritterKind kind) const {
 	switch (kind) {
 		case CritterKind::Normal:	return sf::Color(220, 80, 80);	//Red
 		case CritterKind::Armored:	return sf::Color(70, 130, 220);	//Blue
-    case CritterKind::Fast:		return sf::Color(245, 195, 65);	//Yellow
+        case CritterKind::Fast:		return sf::Color(245, 195, 65);	//Yellow
 		default:					return sf::Color::White;
 	}
 }
