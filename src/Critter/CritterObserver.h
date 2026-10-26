@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "../GUI/MapView.h"
+#include "../GUI/CritterView.h"
 #include "../Observer/Observer.h"
 #include "Critter.h"
 
@@ -43,6 +44,10 @@ public:
      */
     void plugInto(Critter& critter);
 
+    /*Detaches this observer from a critter*/
+
+    void unplug(Critter& critter);
+
     /**
      * @brief Redraws the critter view. Called by the critter after a change.
      * @param subject The critter that changed. Ignored if it is not a Critter.
@@ -63,7 +68,7 @@ public:
 private:
 
     /*Draws one critter on the window*/
-    void drawCritter(const Critter¦ critter, float cellSize, float originX, float originY);
+    void drawCritter(const Critter& critter, float cellSize, float originX, float originY);
 
     std::ostream& out;                  // Where the view is written.
    /* Observable* subject = nullptr;      // Critter being watched, or nullptr.*/
@@ -76,7 +81,7 @@ private:
         /*
         * This method allows us to retrieve the CritterKind of the the Critter observed by CritterObserver
         */
-    static const char* kindString(CritterKind k) {}
+    //static const char* kindString(CritterKind k) {}
 };
 
 
