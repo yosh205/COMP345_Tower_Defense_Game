@@ -64,7 +64,7 @@ few minutes; after a code change only `cmake --build build -j` is needed.
 
 `tests/tests.cpp` checks the game rules of the map, towers, critters and waves,
 including the tower, map and critter observers
-(145 checks). It is a separate program and does not need SFML or a screen.
+(192 checks). It is a separate program and does not need SFML or a screen.
 
 ```bash
 # With CMake (after building as above)
@@ -93,7 +93,16 @@ Then open `docs/html/index.html` in a browser.
 
 Everything is in-game menus (no console prompts):
 
-1. **Start screen** — set rows/columns, optional fullscreen, click **Start Game**.
+1. **Start screen** — choose a **map** with the `<` `>` arrows: **RANDOM** (a random path on the
+   rows/columns you set) or one of four hand-built maps (EASY BEND, SNAKE, ZIGZAG, SPIRAL).
+   Optional fullscreen, then click **Start Game**.
+   **Map Editor** lets you draw your own map: with RANDOM chosen it starts from a blank map of
+   the rows/columns you set, otherwise from a copy of the chosen map. Pick a tool (**Path**,
+   **Entry**, **Exit**, **Erase**) and click or drag on the cells; right click erases. There is at
+   most one entry and one exit: placing a new one moves it. The sidebar shows whether the map is
+   **VALID** (`Map::isValid()`) or what is missing, and warns about path cells critters never walk
+   on. **Save** adds the map to the start menu as CUSTOM 1, CUSTOM 2, …; **Play this map** saves
+   it and starts a game on it. Saved maps last until the program is closed.
    **Map Rules Demo** shows seven hand-built maps (one valid, six that each break one map
    rule) with the result of `Map::isValid()`; use Prev/Next or the arrow keys, Esc to go back.
    **Map Observer Demo** opens a window with a `MapObserver` attached to a map. Each key
@@ -110,7 +119,7 @@ Everything is in-game menus (no console prompts):
    sidebar shows how many critters are left; when it ends, the button returns for the next, harder wave.
    Each wave starts with **3 hearts**. A critter that reaches the exit removes half a heart.
    At 0 hearts the game over screen offers **Play Again** or **Main Menu**.
-5. **New map** / **Fullscreen** — sidebar buttons (**F11** also toggles fullscreen)  
+5. **New map** (random map) or **Restart map** (hand-built map) / **Fullscreen** — sidebar buttons (**F11** also toggles fullscreen)  
    Right-click cancels shop selection
 
 The sidebar shows your **gold** (it rises when towers kill critters and drops when
@@ -183,7 +192,7 @@ without a window (see `tests/tests.cpp`).
 
 | Folder | Classes | Responsibility |
 |---|---|---|
-| `src/Map` | `Map`, `generateRandomMap()`, `makeMapExamples()` | Grid of cells, setters, tower placement, validity check, entry-to-exit path (breadth-first search); example valid/invalid maps for the demo. `Map` is an Observable |
+| `src/Map` | `Map`, `generateRandomMap()`, `makeMapExamples()`, `makePlayableMaps()`, `makeMapFromRows()`, `MapEditor` | Grid of cells, setters, tower placement, validity check, entry-to-exit path (breadth-first search); example valid/invalid maps for the demo; the hand-built maps the player can choose, written as rows of text (`E` entry, `X` exit, `.` path, `#` scenery); the editing rules of the map editor (one entry and one exit, what is missing, unused path cells). `Map` is an Observable |
 | `src/Tower` | `Tower` (abstract), `DirectDamageTower`, `AreaDamageTower`, `SlowingTower`, `TowerObserver`, `TowerObserverDriver` | Costs, levels, upgrade/sell, detect → select → shoot. Subclasses only change the shot's effect (`fireAt()`). `Tower` is an Observable; `TowerObserverDriver` plugs in a `TowerObserver` and upgrades the tower so the view is printed again after each change |
 | `src/Observer` | `Observable`, `Observer` | Subject/observer base. `attach` / `detach` / `notify` |
 | `src/Critter` | `Critter`, `CritterGroupGenerator`, `CritterObserver`, `CritterObserverDriver` | Critter stats and effects; creating a wave, spawning, moving along the path, rewards and theft. `Critter` is an Observable; `CritterObserver` prints and redraws the watched critters on every change; `CritterObserverDriver` is the Critter Observer Demo |

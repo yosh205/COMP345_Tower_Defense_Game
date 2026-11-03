@@ -7,6 +7,7 @@
  */
 #include <SFML/Graphics.hpp>
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,6 +21,8 @@
 #include "Map/Map.h"
 #include "Map/MapExamples.h"
 #include "Map/MapGenerator.h"
+#include "Map/MapEditor.h"
+#include "Map/MapLibrary.h"
 #include "Tower/AreaDamageTower.h"
 #include "Tower/DirectDamageTower.h"
 #include "Tower/SlowingTower.h"
@@ -30,7 +33,7 @@
 #include "Critter/CritterObserverDriver.h"
 namespace {
 
-enum class AppState { StartMenu, MapDemo, Playing, GameOver };
+enum class AppState { StartMenu, MapDemo, MapEditor, Playing, GameOver };
 
 bool isOccupied(const std::vector<std::unique_ptr<Tower>>& towers, int row, int col) {
     for (const auto& t : towers) {
@@ -154,6 +157,61 @@ int main() {
     // accepts and rejects. Opened from the start menu.
     const std::vector<MapExample> mapExamples = makeMapExamples();
     std::size_t exampleIndex = 0;
+
+    // Maps the player can choose on the start menu, after RANDOM. Maps saved
+    // in the map editor are added at the end as CUSTOM 1, CUSTOM 2, ...
+    std::vector<NamedMap> playableMaps = makePlayableMaps();
+    auto refreshMapChoices = [&]() {
+        std::vector<std::string> mapNames;
+        for (const NamedMap& choice : playableMaps) {
+            mapNames.push_back(choice.name + " " + std::to_string(choice.map.getLength()) + "X" +
+                               std::to_string(choice.map.getWidth()));
+        }
+        hud.setMapChoices(mapNames);
+    };
+    refreshMapChoices();
+
+    // Map editor: the map being drawn, how it is drawn, and its save state.
+    MapEditor editor(10, 12);
+    MapView editorView(40.f);
+    std::string editorMessage;   // result of the last Save / Play, shown in the sidebar
+    int customCount = 0;         // custom maps saved so far
+    int editorSavedChoice = -1;  // start-menu choice holding the current drawing, -1 if changed since
+    bool editorDragging = false; // a button is held down after a press on the map
+
+    // Adds the editor's map to the start menu (once per change) and returns its choice.
+    auto saveEditorMap = [&]() {
+        if (editorSavedChoice < 0) {
+            ++customCount;
+            playableMaps.push_back({"CUSTOM " + std::to_string(customCount), editor.getMap()});
+            refreshMapChoices();
+            editorSavedChoice = static_cast<int>(playableMaps.size());  // RANDOM is choice 0
+        }
+        hud.setMapChoice(editorSavedChoice);
+        editorMessage = "SAVED AS " +
+                        playableMaps[static_cast<std::size_t>(editorSavedChoice - 1)].name;
+        return editorSavedChoice;
+    };
+
+    // The cell under a window position in the editor, or (-1, -1) off the map.
+    auto editorCellAt = [&](float px, float py) {
+        const float cell = editorView.getCellSize();
+        const int col = static_cast<int>(std::floor((px - editorView.getOriginX()) / cell));
+        const int row = static_cast<int>(std::floor((py - editorView.getOriginY()) / cell));
+        if (!editor.getMap().isInBounds(row, col)) {
+            return Position{-1, -1};
+        }
+        return Position{row, col};
+    };
+
+    // The map chosen on the start menu: a new random map, or a fresh copy of a hand-built one.
+    auto makeChosenMap = [&]() {
+        const int choice = hud.getMapChoice();
+        if (choice == 0) {
+            return generateRandomMap(hud.getMapRows(), hud.getMapCols());
+        }
+        return playableMaps[static_cast<std::size_t>(choice - 1)].map;
+    };
     MapView exampleView(40.f);
     std::vector<std::unique_ptr<Tower>> towers;
     int selectedTower = -1;
@@ -196,7 +254,7 @@ int main() {
     };
 
     auto beginPlay = [&]() {
-        map = generateRandomMap(hud.getMapRows(), hud.getMapCols());
+        map = makeChosenMap();
         towers.clear();
         selectedTower = -1;
         hud.setGold(500);
@@ -314,6 +372,18 @@ int main() {
                         driver.run();  // opens its own window; the menu continues when it is closed
                         continue;
                     }
+                    if (hud.clickedMapEditor(mouseF)) {
+                        // RANDOM: a blank map of the chosen size. Otherwise edit a copy of the chosen map.
+                        const int choice = hud.getMapChoice();
+                        editor = choice == 0
+                                     ? MapEditor(hud.getMapRows(), hud.getMapCols())
+                                     : MapEditor(playableMaps[static_cast<std::size_t>(choice - 1)].map);
+                        editorSavedChoice = choice == 0 ? -1 : choice;
+                        editorMessage.clear();
+                        editorDragging = false;
+                        state = AppState::MapEditor;
+                        continue;
+                    }
                     if (hud.clickedMapDemo(mouseF)) {
                         state = AppState::MapDemo;
                         exampleIndex = 0;
@@ -349,6 +419,72 @@ int main() {
                     exampleIndex = (exampleIndex + 1) % count;
                 } else if (action == "prev") {
                     exampleIndex = (exampleIndex + count - 1) % count;
+                } else if (action == "back") {
+                    state = AppState::StartMenu;
+                }
+                continue;
+            }
+
+            if (state == AppState::MapEditor) {
+                // Left click / drag paints with the selected tool, right click / drag erases.
+                std::string action = "none";
+                bool changed = false;
+                if (event.type == sf::Event::MouseButtonPressed) {
+                    const float px = static_cast<float>(event.mouseButton.x);
+                    const float py = static_cast<float>(event.mouseButton.y);
+                    const Position cell = editorCellAt(px, py);
+                    if (event.mouseButton.button == sf::Mouse::Left && px >= mapAreaW) {
+                        action = hud.handleMapEditorClick(sf::Vector2f(px, py));
+                    } else if (cell.row >= 0) {
+                        editorDragging = true;
+                        changed = event.mouseButton.button == sf::Mouse::Right
+                                      ? editor.erase(cell.row, cell.col)
+                                      : editor.paint(cell.row, cell.col);
+                    }
+                } else if (event.type == sf::Event::MouseButtonReleased) {
+                    editorDragging = false;
+                } else if (event.type == sf::Event::MouseMoved && editorDragging) {
+                    const Position cell = editorCellAt(static_cast<float>(event.mouseMove.x),
+                                                       static_cast<float>(event.mouseMove.y));
+                    if (cell.row >= 0) {
+                        if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
+                            changed = editor.erase(cell.row, cell.col);
+                        } else if (editor.getTool() == EditorTool::Path ||
+                                   editor.getTool() == EditorTool::Scenery) {
+                            // Entry and Exit are placed with a click, not dragged around.
+                            changed = editor.paint(cell.row, cell.col);
+                        }
+                    }
+                } else if (event.type == sf::Event::KeyPressed &&
+                           event.key.code == sf::Keyboard::Escape) {
+                    action = "back";
+                }
+                if (changed) {
+                    editorSavedChoice = -1;  // the drawing differs from any saved copy
+                    editorMessage.clear();
+                }
+
+                if (action == "tool_path") {
+                    editor.setTool(EditorTool::Path);
+                } else if (action == "tool_entry") {
+                    editor.setTool(EditorTool::Entry);
+                } else if (action == "tool_exit") {
+                    editor.setTool(EditorTool::Exit);
+                } else if (action == "tool_erase") {
+                    editor.setTool(EditorTool::Scenery);
+                } else if (action == "clear") {
+                    editor.clear();
+                    editorSavedChoice = -1;
+                    editorMessage.clear();
+                } else if (action == "save" || action == "play") {
+                    if (!editor.isValid()) {
+                        editorMessage = "FIX THE MAP FIRST";
+                    } else {
+                        saveEditorMap();
+                        if (action == "play") {
+                            beginPlay();  // plays the start menu's chosen map: this one
+                        }
+                    }
                 } else if (action == "back") {
                     state = AppState::StartMenu;
                 }
@@ -395,7 +531,7 @@ int main() {
                         selectedTower = -1;
                         hud.clearShopSelection();
                     } else if (action == "new_map") {
-                        map = generateRandomMap(hud.getMapRows(), hud.getMapCols());
+                        map = makeChosenMap();
                         towers.clear();
                         resetWaves();  // old critters would be on the old map's path
                         selectedTower = -1;
@@ -465,6 +601,29 @@ int main() {
             hud.drawMapDemo(window, example.name, example.rule, example.map.isValid(),
                             static_cast<int>(exampleIndex),
                             static_cast<int>(mapExamples.size()));
+        } else if (state == AppState::MapEditor) {
+            // The map being drawn, centred left of the sidebar, with the hovered cell outlined.
+            const Map& drawn = editor.getMap();
+            const float areaH = static_cast<float>(window.getSize().y);
+            const float rows = static_cast<float>(drawn.getLength());
+            const float cols = static_cast<float>(drawn.getWidth());
+            const float cell = 0.92f * std::min(mapAreaW / cols, areaH / rows);
+            editorView.setCellSize(cell);
+            editorView.setOrigin((mapAreaW - cell * cols) * 0.5f, (areaH - cell * rows) * 0.5f);
+            editorView.draw(window, drawn);
+
+            const Position hover = editorCellAt(mouseF.x, mouseF.y);
+            if (hover.row >= 0) {
+                sf::RectangleShape outline(sf::Vector2f(cell - 4.f, cell - 4.f));
+                outline.setPosition(editorView.getOriginX() + hover.col * cell + 2.f,
+                                    editorView.getOriginY() + hover.row * cell + 2.f);
+                outline.setFillColor(sf::Color::Transparent);
+                outline.setOutlineThickness(2.f);
+                outline.setOutlineColor(sf::Color(255, 220, 80));
+                window.draw(outline);
+            }
+            hud.drawMapEditor(window, editor.getTool(), editor.isValid(), editor.getProblem(),
+                              editor.getUnusedPathCells(), editorMessage);
         } else if (state == AppState::GameOver) {
             hud.drawGameOver(window, waveNumber);
         } else {

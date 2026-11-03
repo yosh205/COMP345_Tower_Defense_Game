@@ -60,6 +60,8 @@ const Glyph* glyphFor(char ch) {
     static const Glyph G_LP = {0x00, 0x1C, 0x22, 0x41, 0x00};
     static const Glyph G_RP = {0x00, 0x41, 0x22, 0x1C, 0x00};
     static const Glyph G_PCT = {0x23, 0x13, 0x08, 0x64, 0x62};
+    static const Glyph G_LT = {0x08, 0x14, 0x22, 0x41, 0x00};
+    static const Glyph G_GT = {0x00, 0x41, 0x22, 0x14, 0x08};
 
     ch = static_cast<char>(std::toupper(static_cast<unsigned char>(ch)));
     if (ch == ' ') return &G_SP;
@@ -85,6 +87,8 @@ const Glyph* glyphFor(char ch) {
         case '(': return &G_LP;
         case ')': return &G_RP;
         case '%': return &G_PCT;
+        case '<': return &G_LT;
+        case '>': return &G_GT;
         default: return &G_SP;
     }
 }

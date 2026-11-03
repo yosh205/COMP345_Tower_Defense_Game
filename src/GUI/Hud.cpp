@@ -27,6 +27,20 @@ void Hud::setMapSize(int rows, int cols) {
 int Hud::getMapRows() const { return mapRows; }
 int Hud::getMapCols() const { return mapCols; }
 
+void Hud::setMapChoices(const std::vector<std::string>& names) {
+    mapChoices.assign(1, "RANDOM");
+    mapChoices.insert(mapChoices.end(), names.begin(), names.end());
+    mapChoice = 0;
+}
+
+int Hud::getMapChoice() const { return mapChoice; }
+
+void Hud::setMapChoice(int choice) {
+    if (choice >= 0 && choice < static_cast<int>(mapChoices.size())) {
+        mapChoice = choice;
+    }
+}
+
 void Hud::setGold(int g) { gold = g; }
 int Hud::getGold() const { return gold; }
 
@@ -120,8 +134,8 @@ void Hud::drawStartMenu(sf::RenderWindow& window) const {
     bg.setFillColor(sf::Color(18, 24, 32));
     window.draw(bg);
 
-    sf::RectangleShape panel(sf::Vector2f(480.f, 610.f));
-    panel.setPosition((w - 480.f) * 0.5f, (h - 610.f) * 0.5f);
+    sf::RectangleShape panel(sf::Vector2f(480.f, 690.f));
+    panel.setPosition((w - 480.f) * 0.5f, (h - 690.f) * 0.5f);
     panel.setFillColor(sf::Color(28, 38, 52));
     panel.setOutlineThickness(2.f);
     panel.setOutlineColor(sf::Color(70, 110, 150));
@@ -131,49 +145,83 @@ void Hud::drawStartMenu(sf::RenderWindow& window) const {
     const float py = panel.getPosition().y;
 
     drawLabel(window, "TOWER DEFENSE", px + 80.f, py + 28.f, 3.f, sf::Color(220, 235, 255));
-    drawLabel(window, "CHOOSE MAP SIZE THEN START", px + 65.f, py + 70.f, 2.f,
+    drawLabel(window, "CHOOSE A MAP THEN START", px + 71.f, py + 70.f, 2.f,
               sf::Color(160, 175, 195));
 
-    drawLabel(window, "ROWS", px + 40.f, py + 125.f, 2.f);
-    rowsMinus = makeRect(px + 210.f, py + 115.f, 44.f, 40.f);
-    rowsPlus = makeRect(px + 350.f, py + 115.f, 44.f, 40.f);
-    drawButton(window, rowsMinus, "-", sf::Color(50, 70, 95));
-    drawButton(window, rowsPlus, "+", sf::Color(50, 70, 95));
-    drawLabel(window, std::to_string(mapRows), px + 280.f, py + 125.f, 2.5f,
+    // Map selector: RANDOM, then the hand-built maps. The arrows wrap around.
+    drawLabel(window, "MAP", px + 40.f, py + 125.f, 2.f);
+    mapPrevBtn = makeRect(px + 110.f, py + 115.f, 44.f, 40.f);
+    mapNextBtn = makeRect(px + 392.f, py + 115.f, 44.f, 40.f);
+    drawButton(window, mapPrevBtn, "<", sf::Color(50, 70, 95));
+    drawButton(window, mapNextBtn, ">", sf::Color(50, 70, 95));
+    const std::string& mapName = mapChoices[static_cast<std::size_t>(mapChoice)];
+    const float nameWidth = static_cast<float>(mapName.size()) * 6.f * 2.f;  // 6 font pixels per character
+    drawLabel(window, mapName, px + 273.f - nameWidth * 0.5f, py + 128.f, 2.f,
               sf::Color(255, 220, 100));
 
-    drawLabel(window, "COLUMNS", px + 40.f, py + 185.f, 2.f);
-    colsMinus = makeRect(px + 210.f, py + 175.f, 44.f, 40.f);
-    colsPlus = makeRect(px + 350.f, py + 175.f, 44.f, 40.f);
-    drawButton(window, colsMinus, "-", sf::Color(50, 70, 95));
-    drawButton(window, colsPlus, "+", sf::Color(50, 70, 95));
-    drawLabel(window, std::to_string(mapCols), px + 280.f, py + 185.f, 2.5f,
-              sf::Color(255, 220, 100));
+    // Rows and columns only apply to a random map; a hand-built map has its own size.
+    if (mapChoice == 0) {
+        drawLabel(window, "ROWS", px + 40.f, py + 185.f, 2.f);
+        rowsMinus = makeRect(px + 210.f, py + 175.f, 44.f, 40.f);
+        rowsPlus = makeRect(px + 350.f, py + 175.f, 44.f, 40.f);
+        drawButton(window, rowsMinus, "-", sf::Color(50, 70, 95));
+        drawButton(window, rowsPlus, "+", sf::Color(50, 70, 95));
+        drawLabel(window, std::to_string(mapRows), px + 280.f, py + 185.f, 2.5f,
+                  sf::Color(255, 220, 100));
 
-    fullscreenBtn = makeRect(px + 80.f, py + 245.f, 320.f, 44.f);
+        drawLabel(window, "COLUMNS", px + 40.f, py + 245.f, 2.f);
+        colsMinus = makeRect(px + 210.f, py + 235.f, 44.f, 40.f);
+        colsPlus = makeRect(px + 350.f, py + 235.f, 44.f, 40.f);
+        drawButton(window, colsMinus, "-", sf::Color(50, 70, 95));
+        drawButton(window, colsPlus, "+", sf::Color(50, 70, 95));
+        drawLabel(window, std::to_string(mapCols), px + 280.f, py + 245.f, 2.5f,
+                  sf::Color(255, 220, 100));
+    } else {
+        rowsMinus = sf::FloatRect();
+        rowsPlus = sf::FloatRect();
+        colsMinus = sf::FloatRect();
+        colsPlus = sf::FloatRect();
+        drawLabel(window, "THIS MAP HAS A FIXED SIZE", px + 120.f, py + 215.f, 1.6f,
+                  sf::Color(120, 140, 160));
+    }
+
+    fullscreenBtn = makeRect(px + 80.f, py + 300.f, 320.f, 44.f);
     drawButton(window, fullscreenBtn,
                fullscreenPreferred ? "FULLSCREEN ON" : "FULLSCREEN OFF",
                sf::Color(50, 70, 95), fullscreenPreferred);
-    drawLabel(window, "OR PRESS F11 ANYTIME", px + 120.f, py + 300.f, 1.6f,
+    drawLabel(window, "OR PRESS F11 ANYTIME", px + 120.f, py + 352.f, 1.6f,
               sf::Color(120, 140, 160));
 
-    startBtn = makeRect(px + 90.f, py + 340.f, 300.f, 52.f);
+    startBtn = makeRect(px + 90.f, py + 385.f, 300.f, 52.f);
     drawButton(window, startBtn, "START GAME", sf::Color(40, 130, 90));
 
+    // Opens the editor: a blank map of the chosen size, or a copy of the chosen map.
+    mapEditorBtn = makeRect(px + 90.f, py + 447.f, 300.f, 44.f);
+    drawButton(window, mapEditorBtn, "MAP EDITOR", sf::Color(40, 100, 120));
+
     // Opens the screen that shows which maps Map::isValid() accepts and rejects.
-    mapDemoBtn = makeRect(px + 90.f, py + 410.f, 300.f, 44.f);
+    mapDemoBtn = makeRect(px + 90.f, py + 503.f, 300.f, 44.f);
     drawButton(window, mapDemoBtn, "MAP RULES DEMO", sf::Color(50, 70, 95));
 
     // Opens the Part 2 driver: a map with a MapObserver that redraws on every change.
-    mapObserverDemoBtn = makeRect(px + 90.f, py + 470.f, 300.f, 44.f);
+    mapObserverDemoBtn = makeRect(px + 90.f, py + 555.f, 300.f, 44.f);
     drawButton(window, mapObserverDemoBtn, "MAP OBSERVER DEMO", sf::Color(50, 70, 95));
 
     // Opens the Part 3 driver: critters with a CritterObserver that redraws on every change.
-    critterObserverDemoBtn = makeRect(px + 90.f, py + 530.f, 300.f, 44.f);
+    critterObserverDemoBtn = makeRect(px + 90.f, py + 607.f, 300.f, 44.f);
     drawButton(window, critterObserverDemoBtn, "CRITTER OBSERVER DEMO", sf::Color(50, 70, 95));
 }
 
 bool Hud::handleStartClick(sf::Vector2f pos) {
+    const int choices = static_cast<int>(mapChoices.size());
+    if (contains(mapPrevBtn, pos)) {
+        mapChoice = (mapChoice + choices - 1) % choices;
+        return false;
+    }
+    if (contains(mapNextBtn, pos)) {
+        mapChoice = (mapChoice + 1) % choices;
+        return false;
+    }
     if (contains(rowsMinus, pos)) {
         mapRows = std::max(4, mapRows - 1);
         return false;
@@ -308,7 +356,9 @@ void Hud::drawPlayHud(sf::RenderWindow& window, const Tower* selected) const {
     }
     y += 48.f;
     newMapBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
-    drawButton(window, newMapBtn, "NEW MAP", sf::Color(50, 70, 95));
+    // A random map is replaced by a new one; a hand-built map starts over.
+    drawButton(window, newMapBtn, mapChoice == 0 ? "NEW MAP" : "RESTART MAP",
+               sf::Color(50, 70, 95));
     y += 48.f;
     playFullscreenBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
     drawButton(window, playFullscreenBtn,
@@ -487,4 +537,101 @@ bool Hud::clickedMapObserverDemo(sf::Vector2f pos) const {
 
 bool Hud::clickedCritterObserverDemo(sf::Vector2f pos) const {
     return contains(critterObserverDemoBtn, pos);
+}
+
+bool Hud::clickedMapEditor(sf::Vector2f pos) const {
+    return contains(mapEditorBtn, pos);
+}
+
+void Hud::drawMapEditor(sf::RenderWindow& window, EditorTool tool, bool valid,
+                        const std::string& problem, int unused,
+                        const std::string& message) const {
+    const float w = static_cast<float>(window.getSize().x);
+    const float h = static_cast<float>(window.getSize().y);
+    const float x = w - kSidebarWidth;
+
+    // Same sidebar background as during play.
+    sf::RectangleShape side(sf::Vector2f(kSidebarWidth, h));
+    side.setPosition(x, 0.f);
+    side.setFillColor(sf::Color(22, 28, 38));
+    window.draw(side);
+
+    sf::RectangleShape div(sf::Vector2f(2.f, h));
+    div.setPosition(x, 0.f);
+    div.setFillColor(sf::Color(55, 75, 100));
+    window.draw(div);
+
+    float y = 18.f;
+    drawLabel(window, "MAP EDITOR", x + 18.f, y, 2.5f, sf::Color::White);
+    y += 30.f;
+    drawLabel(window, "CLICK OR DRAG ON THE MAP", x + 18.f, y, 1.6f, sf::Color(120, 140, 160));
+    y += 18.f;
+    drawLabel(window, "RIGHT CLICK ERASES", x + 18.f, y, 1.6f, sf::Color(120, 140, 160));
+    y += 30.f;
+
+    // Tools, two per row. The selected one has a yellow outline.
+    drawLabel(window, "TOOL", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
+    y += 22.f;
+    const float half = (kSidebarWidth - 28.f - 8.f) * 0.5f;
+    editorPathBtn = makeRect(x + 14.f, y, half, 40.f);
+    drawButton(window, editorPathBtn, "PATH", sf::Color(150, 125, 80), tool == EditorTool::Path);
+    editorEraseBtn = makeRect(x + 14.f + half + 8.f, y, half, 40.f);
+    drawButton(window, editorEraseBtn, "ERASE", sf::Color(55, 110, 60), tool == EditorTool::Scenery);
+    y += 48.f;
+    editorEntryBtn = makeRect(x + 14.f, y, half, 40.f);
+    drawButton(window, editorEntryBtn, "ENTRY", sf::Color(50, 90, 170), tool == EditorTool::Entry);
+    editorExitBtn = makeRect(x + 14.f + half + 8.f, y, half, 40.f);
+    drawButton(window, editorExitBtn, "EXIT", sf::Color(170, 55, 55), tool == EditorTool::Exit);
+    y += 60.f;
+
+    // Whether the map can be played, straight from Map::isValid().
+    drawLabel(window, valid ? "VALID" : "INVALID", x + 18.f, y, 3.f,
+              valid ? sf::Color(80, 210, 110) : sf::Color(235, 80, 70));
+    y += 32.f;
+    std::string notes = problem;
+    if (valid && unused > 0) {
+        notes = std::to_string(unused) + " PATH CELL" + (unused == 1 ? "" : "S") +
+                " NOT ON\nTHE ROUTE: CRITTERS\nNEVER WALK THERE";
+    }
+    std::size_t start = 0;
+    while (!notes.empty() && start <= notes.size()) {
+        const std::size_t end = notes.find('\n', start);
+        drawLabel(window, notes.substr(start, end == std::string::npos ? std::string::npos : end - start),
+                  x + 18.f, y, 1.6f, sf::Color(220, 225, 235));
+        y += 18.f;
+        if (end == std::string::npos) {
+            break;
+        }
+        start = end + 1;
+    }
+    y = std::max(y + 16.f, 300.f);
+
+    editorPlayBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 44.f);
+    drawButton(window, editorPlayBtn, "PLAY THIS MAP",
+               valid ? sf::Color(40, 130, 90) : sf::Color(60, 65, 75));
+    y += 52.f;
+    editorSaveBtn = makeRect(x + 14.f, y, half, 40.f);
+    drawButton(window, editorSaveBtn, "SAVE", valid ? sf::Color(50, 70, 95) : sf::Color(60, 65, 75));
+    editorClearBtn = makeRect(x + 14.f + half + 8.f, y, half, 40.f);
+    drawButton(window, editorClearBtn, "CLEAR", sf::Color(140, 55, 55));
+    y += 48.f;
+    editorBackBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
+    drawButton(window, editorBackBtn, "BACK TO MENU", sf::Color(120, 50, 140));
+    y += 54.f;
+
+    if (!message.empty()) {
+        drawLabel(window, message, x + 18.f, y, 1.6f, sf::Color(255, 220, 100));
+    }
+}
+
+std::string Hud::handleMapEditorClick(sf::Vector2f pos) const {
+    if (contains(editorPathBtn, pos)) return "tool_path";
+    if (contains(editorEntryBtn, pos)) return "tool_entry";
+    if (contains(editorExitBtn, pos)) return "tool_exit";
+    if (contains(editorEraseBtn, pos)) return "tool_erase";
+    if (contains(editorClearBtn, pos)) return "clear";
+    if (contains(editorSaveBtn, pos)) return "save";
+    if (contains(editorPlayBtn, pos)) return "play";
+    if (contains(editorBackBtn, pos)) return "back";
+    return "none";
 }

@@ -15,6 +15,8 @@
 #include "Critter/CritterGroupGenerator.h"
 #include "Map/Map.h"
 #include "Map/MapExamples.h"
+#include "Map/MapEditor.h"
+#include "Map/MapLibrary.h"
 #include "Observer/Observer.h"
 #include "Tower/AreaDamageTower.h"
 #include "Tower/DirectDamageTower.h"
@@ -155,6 +157,82 @@ void testMapExamples() {
         othersInvalid = othersInvalid && !examples[i].map.isValid();
     }
     CHECK(othersInvalid);
+}
+
+void testMapEditor() {
+    std::cout << "\n[Map editor] The player draws a map; one entry and one exit at most\n";
+    MapEditor editor(3, 5);
+    CHECK(!editor.isValid());
+    CHECK(editor.getProblem() == "PLACE AN ENTRY");
+
+    editor.setTool(EditorTool::Entry);
+    CHECK(editor.paint(1, 0));
+    CHECK(editor.paint(2, 0));  // a second entry moves it
+    CHECK(editor.getMap().getCellType(1, 0) == CellType::Scenery);
+    CHECK(editor.getMap().getCellType(2, 0) == CellType::Entry);
+    CHECK(editor.paint(1, 0));  // move it back
+    CHECK(editor.getProblem() == "PLACE AN EXIT");
+
+    editor.setTool(EditorTool::Exit);
+    CHECK(editor.paint(1, 4));
+    CHECK(!editor.isValid());
+    CHECK(editor.getProblem() != "");  // not connected yet
+    CHECK(editor.getUnusedPathCells() == 0);
+
+    editor.setTool(EditorTool::Path);
+    for (int col = 1; col <= 3; ++col) {
+        editor.paint(1, col);
+    }
+    CHECK(!editor.paint(1, 2));  // already a path cell: nothing changes
+    CHECK(!editor.paint(9, 9));  // outside the map
+    CHECK(editor.isValid());
+    CHECK(editor.getProblem() == "");
+    CHECK(editor.getUnusedPathCells() == 0);
+
+    editor.paint(0, 2);  // a branch off the route
+    CHECK(editor.isValid());
+    CHECK(editor.getUnusedPathCells() == 1);
+
+    CHECK(editor.erase(1, 2));  // cut the path
+    CHECK(!editor.isValid());
+    CHECK(!editor.erase(1, 2));  // already scenery
+
+    // Editing a copy leaves the original map alone.
+    const Map original = makeStraightMap();
+    MapEditor copy(original);
+    CHECK(copy.isValid());
+    copy.clear();
+    CHECK(!copy.isValid());
+    CHECK(copy.getMap().getLength() == 3 && copy.getMap().getWidth() == 5);
+    CHECK(original.isValid());
+}
+
+void testPlayableMaps() {
+    std::cout << "\n[Map] The start menu's maps are valid and have no shortcuts\n";
+    const Map small = makeMapFromRows({"E.#", "#.X"});
+    CHECK(small.getLength() == 2 && small.getWidth() == 3);
+    CHECK(small.getCellType(0, 0) == CellType::Entry);
+    CHECK(small.getCellType(0, 2) == CellType::Scenery);
+    CHECK(small.getCellType(1, 2) == CellType::Exit);
+    CHECK(small.isValid());
+    CHECK_THROWS(makeMapFromRows({}));
+    CHECK_THROWS(makeMapFromRows({"E..", "#X"}));   // rows of different lengths
+    CHECK_THROWS(makeMapFromRows({"E.?", "#.X"}));  // unknown character
+
+    const std::vector<NamedMap> maps = makePlayableMaps();
+    CHECK(maps.size() == 4);
+    for (const NamedMap& choice : maps) {
+        // Every path cell is on the route, so critters cannot cut across.
+        std::size_t walkable = 0;
+        for (int row = 0; row < choice.map.getLength(); ++row) {
+            for (int col = 0; col < choice.map.getWidth(); ++col) {
+                walkable += choice.map.getCellType(row, col) != CellType::Scenery ? 1 : 0;
+            }
+        }
+        CHECK(!choice.name.empty());
+        CHECK(choice.map.isValid());
+        CHECK(choice.map.findPath().size() == walkable);
+    }
 }
 
 // ------------------------------------------------------------- Part 2: Towers
@@ -552,6 +630,8 @@ int main() {
     testMapPath();
     testMapTowerPlacement();
     testMapExamples();
+    testPlayableMaps();
+    testMapEditor();
 
     testTowerLevels();
     testTowerSelling();
