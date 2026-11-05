@@ -7,7 +7,9 @@
 
 #include <SFML/Graphics.hpp>
 #include <string>
+#include <vector>
 
+#include "../Map/MapEditor.h"
 #include "../Tower/Tower.h"
 
 /** @brief Which shop item is armed for placement (or none). */
@@ -49,8 +51,28 @@ public:
     int getMapRows() const;
     /** @return Number of map columns chosen in the start menu (4 to 30). */
     int getMapCols() const;
+
     /**
-     * @brief Draws the start menu: title, rows/columns selectors, fullscreen option and Start button.
+     * @brief Sets the maps the start menu offers. The menu always offers RANDOM
+     * first (a random map of the chosen rows and columns), then these.
+     * @param names Names of the hand-built maps, in order.
+     */
+    void setMapChoices(const std::vector<std::string>& names);
+
+    /**
+     * @return 0 for RANDOM, otherwise the chosen hand-built map plus one
+     *         (1 = the first name given to setMapChoices()).
+     */
+    int getMapChoice() const;
+
+    /**
+     * @brief Selects a map in the start menu, e.g. one just saved in the map editor.
+     * @param choice 0 for RANDOM, otherwise a hand-built map plus one. Ignored if out of range.
+     */
+    void setMapChoice(int choice);
+    /**
+     * @brief Draws the start menu: title, map selector, rows/columns selectors (random map only),
+     * fullscreen option, Start button and the demo buttons.
      * @param window The window to draw into.
      */
     void drawStartMenu(sf::RenderWindow& window) const;
@@ -68,6 +90,36 @@ public:
      * @return true if the player clicked Map Rules Demo.
      */
     bool clickedMapDemo(sf::Vector2f pos) const;
+
+    /**
+     * @brief Checks whether a start-menu click hit the Map Editor button.
+     * @param pos Mouse position in window pixels.
+     * @return true if the player clicked Map Editor.
+     */
+    bool clickedMapEditor(sf::Vector2f pos) const;
+
+    // --- Map editor ---
+    /**
+     * @brief Draws the map editor sidebar: tools, whether the map is valid (or
+     * what is missing), and Clear / Save / Play / Back buttons.
+     * @param window  The window to draw into.
+     * @param tool    The selected tool (highlighted).
+     * @param valid   Result of Map::isValid() for the map being drawn.
+     * @param problem What is missing when the map is not valid (lines separated by '\n').
+     * @param unused  Path cells not on the route (shown as a note when not 0).
+     * @param message Result of the last action, e.g. "SAVED AS CUSTOM 1", or "".
+     */
+    void drawMapEditor(sf::RenderWindow& window, EditorTool tool, bool valid,
+                       const std::string& problem, int unused,
+                       const std::string& message) const;
+
+    /**
+     * @brief Handles a click in the map editor sidebar.
+     * @param pos Mouse position in window pixels.
+     * @return "tool_path", "tool_entry", "tool_exit", "tool_erase", "clear",
+     *         "save", "play", "back" or "none".
+     */
+    std::string handleMapEditorClick(sf::Vector2f pos) const;
 
     /**
      * @brief Checks whether a start-menu click hit the Map Observer Demo button.
@@ -157,6 +209,7 @@ public:
      * @param selected The selected tower, or nullptr (Upgrade/Sell only work with one).
      * @return Action code: "none", "buy_direct", "buy_area", "buy_slow",
      *         "upgrade", "sell", "start_wave", "new_map", "toggle_fullscreen".
+     *         "new_map" means a new random map, or restarting the chosen hand-built map.
      */
     std::string handlePlayClick(sf::Vector2f pos, const Tower* selected);
 
@@ -191,6 +244,8 @@ public:
 private:
     int mapRows = 10;             ///< Map rows chosen in the start menu.
     int mapCols = 12;             ///< Map columns chosen in the start menu.
+    std::vector<std::string> mapChoices{"RANDOM"};  ///< Start menu map names; RANDOM first.
+    int mapChoice = 0;            ///< Index into mapChoices.
     int gold = 500;               ///< Player's gold shown in the sidebar.
     int healthHalves = kHeartsPerWave * 2;  ///< Health left, in half-hearts. 6 = full.
     ShopSelection shopSelection = ShopSelection::None;  ///< Tower type armed for placement.
@@ -238,12 +293,24 @@ private:
     // An empty rectangle means the button is hidden and cannot be clicked.
 
     mutable sf::FloatRect startBtn;           ///< Start menu: Start Game button.
+    mutable sf::FloatRect mapPrevBtn;         ///< Start menu: previous map "<" button.
+    mutable sf::FloatRect mapNextBtn;         ///< Start menu: next map ">" button.
     mutable sf::FloatRect rowsMinus;          ///< Start menu: rows "-" button.
     mutable sf::FloatRect rowsPlus;           ///< Start menu: rows "+" button.
     mutable sf::FloatRect colsMinus;          ///< Start menu: columns "-" button.
     mutable sf::FloatRect colsPlus;           ///< Start menu: columns "+" button.
     mutable sf::FloatRect fullscreenBtn;      ///< Start menu: fullscreen on/off button.
     mutable sf::FloatRect mapDemoBtn;         ///< Start menu: Map Rules Demo button.
+    mutable sf::FloatRect mapEditorBtn;       ///< Start menu: Map Editor button.
+
+    mutable sf::FloatRect editorPathBtn;      ///< Map editor: Path tool.
+    mutable sf::FloatRect editorEntryBtn;     ///< Map editor: Entry tool.
+    mutable sf::FloatRect editorExitBtn;      ///< Map editor: Exit tool.
+    mutable sf::FloatRect editorEraseBtn;     ///< Map editor: Erase (scenery) tool.
+    mutable sf::FloatRect editorClearBtn;     ///< Map editor: clear the whole map.
+    mutable sf::FloatRect editorSaveBtn;      ///< Map editor: add the map to the start menu.
+    mutable sf::FloatRect editorPlayBtn;      ///< Map editor: play the map.
+    mutable sf::FloatRect editorBackBtn;      ///< Map editor: back to the start menu.
     mutable sf::FloatRect mapObserverDemoBtn; ///< Start menu: Map Observer Demo button.
     mutable sf::FloatRect critterObserverDemoBtn; ///< Start menu: Critter Observer Demo button.
 
