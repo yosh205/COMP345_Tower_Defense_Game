@@ -64,7 +64,7 @@ few minutes; after a code change only `cmake --build build -j` is needed.
 
 `tests/tests.cpp` checks the game rules of the map, towers, critters and waves,
 including the tower, map and critter observers
-(192 checks). It is a separate program and does not need SFML or a screen.
+(204 checks). It is a separate program and does not need SFML or a screen.
 
 ```bash
 # With CMake (after building as above)
@@ -121,6 +121,9 @@ Everything is in-game menus (no console prompts):
    At 0 hearts the game over screen offers **Play Again** or **Main Menu**.
 5. **New map** (random map) or **Restart map** (hand-built map) / **Fullscreen** — sidebar buttons (**F11** also toggles fullscreen)  
    Right-click cancels shop selection
+6. **Overlap** — start menu and sidebar button. **OFF** (the default) keeps one critter per path cell,
+   as the specification asks: a critter waits a full cell behind the one in front, and the next one
+   only enters when the entry is free. **ON** lets critters pass through each other.
 
 The sidebar shows your **gold** (it rises when towers kill critters and drops when
 critters reach the exit), the current **wave**, and a **health bar** of 3 hearts.

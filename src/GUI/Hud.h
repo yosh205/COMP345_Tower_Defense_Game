@@ -236,7 +236,8 @@ public:
 
     /**
      * @return True when critters may stand on the same path tile.
-     * The start menu and the play sidebar both change this. Default is true.
+     * The start menu and the play sidebar both change this. Default is false
+     * (one critter per tile, as the project specification asks).
      */
     bool crittersCanOverlap() const;
     /**
@@ -262,7 +263,7 @@ private:
     int healthHalves = kHeartsPerWave * 2;  ///< Health left, in half-hearts. 6 = full.
     ShopSelection shopSelection = ShopSelection::None;  ///< Tower type armed for placement.
     bool fullscreenPreferred = false;  ///< Fullscreen option from the menu / F11.
-    bool critterOverlap = true;        ///< True: critters may share a path tile.
+    bool critterOverlap = false;       ///< True: critters may share a path tile.
     int wave = 0;                 ///< Wave number shown in the sidebar.
     int crittersLeft = 0;         ///< Critters of the wave still in play.
     bool waveInProgress = false;  ///< True while a wave runs.

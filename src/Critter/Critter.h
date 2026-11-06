@@ -67,7 +67,7 @@ public:
      * @return Distance travelled along the path, in cells (e.g. 2.5 = halfway
      *         between the 3rd and 4th path cells). Used for smooth movement.
      */
-    float getProgress();
+    float getProgress() const;
     /**
      * @brief Adds cellsMoved to the distance travelled along the path.
      * @param cellsMoved Distance moved this frame, in cells.

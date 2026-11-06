@@ -44,7 +44,7 @@ float Critter::getBaseSpeed() const { return baseSpeed; }
 float Critter::getRow() const { return row; }
 float Critter::getCol() const { return col; }
 
-float Critter::getProgress() { return progress; }
+float Critter::getProgress() const { return progress; }
 void Critter::addProgress(float cellsMoved) {
     this->progress += cellsMoved;
     notify();

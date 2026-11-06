@@ -6,6 +6,8 @@
  * prints PASS or FAIL for every check and returns a non-zero exit code if any
  * check fails. It does not use SFML, so it runs without a screen.
  */
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -67,8 +69,12 @@ Map makeStraightMap() {
     return map;
 }
 
-/** @brief Moves every critter waiting in the wave onto the map. */
+/**
+ * @brief Moves every critter waiting in the wave onto the map at once.
+ * They all stand on the entry, so overlap is turned on for this wave.
+ */
 void spawnAll(CritterGroupGenerator& wave, const std::vector<Position>& path) {
+    wave.setAllowOverlap(true);
     while (wave.crittersRemaining() > wave.activeCrittersLeft()) {
         wave.findNextCritter(path);
     }
@@ -395,6 +401,10 @@ void testWaveSpawning() {
     const Critter& first = wave.getActiveCritters().front();
     CHECK(first.getRow() == path.front().row && first.getCol() == path.front().col);
 
+    // The next critter enters once the first one has left the entry.
+    while (wave.getActiveCritters().front().getProgress() < 1.f) {
+        wave.moveAlongPath(path, kFrame);
+    }
     wave.findNextCritter(path);
     CHECK(wave.activeCrittersLeft() == 2);
 }
@@ -611,14 +621,14 @@ void testCritterOverlap() {
     const std::vector<Position> path = makeStraightMap().findPath();
 
     CritterGroupGenerator stacked(1);
+    stacked.setAllowOverlap(true);
     CHECK(stacked.allowsOverlap());
     CHECK(stacked.findNextCritter(path));
     CHECK(stacked.findNextCritter(path));  // same entry tile is allowed
     CHECK(stacked.activeCrittersLeft() == 2);
 
     CritterGroupGenerator wave(1);
-    wave.setAllowOverlap(false);
-    CHECK(!wave.allowsOverlap());
+    CHECK(!wave.allowsOverlap());  // one critter per tile by default
     CHECK(wave.findNextCritter(path));
     CHECK(!wave.findNextCritter(path));  // entry tile is taken
     CHECK(wave.activeCrittersLeft() == 1);
@@ -629,26 +639,24 @@ void testCritterOverlap() {
     CHECK(wave.findNextCritter(path));
     CHECK(wave.activeCrittersLeft() == 2);
 
-    // Long enough for a faster critter to catch a slower one if stacking were allowed.
-    for (int step = 0; step < 4000 && wave.activeCrittersLeft() > 1; ++step) {
+    // Play the whole wave. Fast critters catch up with slower ones, but on
+    // every frame each critter must stay a full cell behind the one in front.
+    float closest = 1e9f;
+    for (int step = 0; step < 60 * 600 && wave.crittersRemaining() > 0; ++step) {
         if (wave.crittersRemaining() > wave.activeCrittersLeft()) {
             wave.findNextCritter(path);
         }
         wave.moveAlongPath(path, kFrame);
-    }
-
-    const std::vector<Critter>& onMap = wave.getActiveCritters();
-    bool sharedTile = false;
-    for (std::size_t i = 0; i < onMap.size(); ++i) {
-        for (std::size_t j = i + 1; j < onMap.size(); ++j) {
-            const int rowI = static_cast<int>(onMap[i].getRow());
-            const int colI = static_cast<int>(onMap[i].getCol());
-            const int rowJ = static_cast<int>(onMap[j].getRow());
-            const int colJ = static_cast<int>(onMap[j].getCol());
-            sharedTile = sharedTile || (rowI == rowJ && colI == colJ);
+        const std::vector<Critter>& onMap = wave.getActiveCritters();
+        for (std::size_t i = 0; i < onMap.size(); ++i) {
+            for (std::size_t j = i + 1; j < onMap.size(); ++j) {
+                // On this straight path, progress is the on-screen distance in cells.
+                closest = std::min(closest, std::abs(onMap[i].getProgress() - onMap[j].getProgress()));
+            }
         }
     }
-    CHECK(!sharedTile);
+    CHECK(wave.crittersRemaining() == 0);  // the line still moves: nobody is stuck
+    CHECK(closest >= 0.999f);
 }
 
 void testWaveEnds() {

@@ -3,7 +3,6 @@
  * @brief Implements CritterGroupGenerator. Function docs are in CritterGroupGenerator.h.
  */
 #include <algorithm>
-#include <cmath>
 #include <string>
 #include <vector>
 #include <queue>
@@ -140,10 +139,11 @@ void CritterGroupGenerator::moveAlongPath(std::vector<Position> path, float dt) 
 			return a < b; // the one that entered earlier keeps the tile
 		});
 		for (std::size_t n = 1; n < order.size(); ++n) {
-			const float tileAhead = std::floor(activeCritters[order[n - 1]].getProgress());
+			// Keep a full cell between critters, so they never touch on screen.
+			const float limit = activeCritters[order[n - 1]].getProgress() - 1.f;
 			Critter& behind = activeCritters[order[n]];
-			if (behind.getProgress() >= tileAhead) {
-				placeAlong(behind, path, std::max(0.f, tileAhead - 0.001f));
+			if (behind.getProgress() > limit) {
+				placeAlong(behind, path, std::max(0.f, limit));
 			}
 		}
 	}

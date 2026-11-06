@@ -19,12 +19,11 @@
  *   Start Wave). Its critters are adapted to the wave number: their level equals
  *   the wave number, and their hit points and speed grow with it, so every wave
  *   is harder than the one before.
-	 * - Critters wait in a queue and enter the map one after another at the entry
-	 *   (findNextCritter()), then walk toward the exit along Map::findPath() (moveAlongPath()).
-	 * - By default several critters may stand on the same path tile. When overlap
-	 *   is turned off, each tile holds at most one critter: a critter waits until
-	 *   the tile in front of it is free, and the next critter does not enter
-	 *   while the entry tile is taken.
+ * - Critters wait in a queue and enter the map one after another at the entry
+ *   (findNextCritter()), then walk toward the exit along Map::findPath() (moveAlongPath()).
+ * - By default each path tile holds at most one critter: a critter stays a full
+ *   cell behind the one in front of it, and the next critter does not enter
+ *   while the entry tile is taken. setAllowOverlap(true) lets critters stack.
  * - A critter killed by towers gives the player its reward; a critter that reaches
  *   the exit steals coins. The game collects these with collectCoinsEarned() and
  *   collectCoinsStolen().
@@ -42,7 +41,7 @@ public:
 
 	/**
 	 * @brief Chooses whether two critters may occupy the same path tile.
-	 * Overlap is allowed until this is called. The choice applies to critters
+	 * Overlap is off until this is called. The choice applies to critters
 	 * already on the map as well as those still waiting to enter.
 	 * @param allow True to let critters stack on a tile, false to keep one per tile.
 	 */
@@ -147,7 +146,7 @@ private:
 	 */
 	int addCritterToGroup(Critter crit);
 
-	bool allowOverlap = true; ///< False: at most one critter on each path tile.
+	bool allowOverlap = false; ///< False: at most one critter on each path tile.
 
 	int coinsEarned = 0;     ///< Rewards from killed critters, not yet collected.
 	int coinsStolen = 0;     ///< Coins taken by escaped critters, not yet collected.
