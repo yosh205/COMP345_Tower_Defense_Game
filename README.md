@@ -1,6 +1,23 @@
 # COMP345_Tower_Defense_Game
-Assignments #1 and #2 for Concordia University course COMP 345.
-Assignment 2 adds the Observer pattern to the map, towers and critters (see *Observer pattern* below).
+Team project for Concordia University course COMP 345: **intermediate delivery**.
+It also contains Assignments #1 and #2; Assignment 2 adds the Observer pattern to the map,
+towers and critters (see *Observer pattern* below).
+
+### Project status
+
+Working in this delivery:
+- **Map:** choose a map (random or hand-built), or draw your own in the **map editor**;
+  `Map::isValid()` checks the map rules. One critter per path cell.
+- **Game:** starting currency, wave-based play started by the player, critters that get
+  stronger every wave, game over when too many critters reach the exit (hearts).
+- **Towers:** three kinds (direct, area damage, slowing) with different costs; buy, place on
+  scenery, upgrade and sell; each tower detects, selects and shoots critters in range.
+- **Critters:** three kinds, coins for each kill, coins stolen at the exit.
+
+Planned for the final delivery:
+- Inspecting characteristics: the stats of every tower kind in the shop (with the ones the
+  player cannot afford greyed out), the critters in play, and the critters of the next wave.
+- Saving and loading maps made in the editor to files.
 
 ## Team Members
 
@@ -137,7 +154,7 @@ walk along a fixed path from an entry to an exit, and the player places towers
 beside the path to destroy them before they get through. Towers are bought and
 upgraded with money earned by defeating enemies, and enemies arrive in waves
 that become harder over time [1][2]. The specific rules below come from the
-COMP 345 Assignment 1 specification [3]; the numbers are the values used in the code.
+COMP 345 project and Assignment 1 specifications [3][5]; the numbers are the values used in the code.
 
 ### Map
 - The map is a grid whose number of rows and columns is chosen before it is created
@@ -147,6 +164,9 @@ COMP 345 Assignment 1 specification [3]; the numbers are the values used in the 
 - There is **exactly one entry** and **exactly one exit**, both path cells.
 - Path cells must connect the entry to the exit, moving up, down, left or right
   (not diagonally). `Map::isValid()` checks all of these rules.
+- Before playing, the player **chooses a map**: a random one, one of four hand-built maps,
+  or one drawn in the **map editor** (only a valid map can be played).
+- During play a path cell holds **at most one critter** (the Overlap option can turn this off).
 
 ### Towers
 - Every tower has a **buying cost**, **range**, **power**, **rate of fire**, **level**
@@ -173,6 +193,8 @@ COMP 345 Assignment 1 specification [3]; the numbers are the values used in the 
   grow with it, so **every wave is harder than the one before**.
 - Critters enter one after another at the entry, one per second, and follow the
   shortest path to the exit (`Map::findPath()`). They never move backwards.
+  A critter that catches up with the one in front waits a full cell behind it, and the
+  next critter only enters when the entry cell is free.
 - Towers reduce a critter's hit points; it **dies at 0**.
 - **Killing** a critter pays a reward **proportional to its level**: 5 coins per level
   (+50% for Armored critters).
@@ -187,6 +209,7 @@ COMP 345 Assignment 1 specification [3]; the numbers are the values used in the 
 2. "Bloons TD", *Wikipedia*. https://en.wikipedia.org/wiki/Bloons_TD
 3. COMP 345 Fall 2026, *Assignment #1* specification (Parts 1–3), Concordia University.
 4. COMP 345 Fall 2026, *Assignment #2* specification (Observer pattern, Parts 1–3), Concordia University.
+5. COMP 345, *Project specifications* (Tower Defense game), Concordia University.
 
 ## Design
 
