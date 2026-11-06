@@ -215,6 +215,7 @@ int main() {
     MapView exampleView(40.f);
     std::vector<std::unique_ptr<Tower>> towers;
     int selectedTower = -1;
+    int selectedCritterID = -1;
     int ghostRow = -1;
     int ghostCol = -1;
     bool fullscreen = false;
@@ -533,6 +534,7 @@ int main() {
                     } else if (action == "new_map") {
                         map = makeChosenMap();
                         towers.clear();
+                        selectedCritterID = -1;
                         resetWaves();  // old critters would be on the old map's path
                         selectedTower = -1;
                         hud.clearShopSelection();
@@ -544,6 +546,7 @@ int main() {
                     } else if (action == "buy_direct" || action == "buy_area" ||
                                action == "buy_slow") {
                         selectedTower = -1;
+                        selectedCritterID = -1;
                     }
                 } else {
                     const int col = static_cast<int>((mouseF.x - ox) / cellSize);
@@ -551,7 +554,9 @@ int main() {
 
                     if (!map.isInBounds(row, col)) {
                         selectedTower = -1;
-                    } else if (hud.getShopSelection() != ShopSelection::None) {
+                        selectedCritterID = -1;
+                    }
+                    else if (hud.getShopSelection() != ShopSelection::None) {
                         const int price = Hud::priceOf(hud.getShopSelection());
                         if (map.canPlaceTower(row, col) && !isOccupied(towers, row, col) &&
                             hud.getGold() >= price) {
@@ -563,14 +568,29 @@ int main() {
                                 hud.clearShopSelection();
                             }
                         }
+                    }
+                    else {
+                            const int hit = CritterView::pickCritterId(
+                                wave.getActiveCritters(), mouseF, cellSize, ox, oy);
+                            if (hit >= 0) {                  // a critter was clicked
+                                selectedCritterID = hit;
+                                selectedTower = -1;
+                            }
+                            else {
+                                selectedTower = findTowerAt(towers, row, col);
+                                selectedCritterID = -1;
+                            }
+                        }
+                        /* }
                     } else {
                         selectedTower = findTowerAt(towers, row, col);
-                    }
+                    }*/
                 }
             } else if (event.type == sf::Event::MouseButtonPressed &&
                        event.mouseButton.button == sf::Mouse::Right) {
                 hud.clearShopSelection();
                 selectedTower = -1;
+                selectedCritterID = -1;
             }
         }
 
@@ -634,7 +654,7 @@ int main() {
 
             mapView.draw(window, map);
             towerView.draw(window, towers, cellSize, ox, oy, selectedTower);
-            critterView.draw(window, wave.getActiveCritters(), cellSize, ox, oy);
+            critterView.draw(window, wave.getActiveCritters(), cellSize, ox, oy, selectedCritterID);
 
             if (ghostRow >= 0 && map.isInBounds(ghostRow, ghostCol)) {
                 const bool ok = map.canPlaceTower(ghostRow, ghostCol) &&
@@ -653,6 +673,11 @@ int main() {
                             waveInProgress ? wave.crittersRemaining() : 0,
                             waveInProgress);
             hud.drawPlayHud(window, sel);
+            if (const Critter* inspected = CritterView::findById(wave.getActiveCritters(), selectedCritterID)) {
+                const float panelH = 170.f;
+                CritterView::drawCharacteristics(window, *inspected,window.getSize().x - Hud::kSidebarWidth + 14.f,window.getSize().y - panelH - 14.f, 
+                    Hud::kSidebarWidth - 28.f, panelH);
+            }
         }
         
         window.display();
