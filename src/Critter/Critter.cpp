@@ -44,10 +44,14 @@ float Critter::getBaseSpeed() const { return baseSpeed; }
 float Critter::getRow() const { return row; }
 float Critter::getCol() const { return col; }
 
-float Critter::getProgress() { return progress; }
+float Critter::getProgress() const { return progress; }
 void Critter::addProgress(float cellsMoved) {
     this->progress += cellsMoved;
     notify();
+}
+
+void Critter::setProgress(float value) {
+    progress = std::max(0.f, value);
 }
 
 void Critter::setPosition(float row, float col) {

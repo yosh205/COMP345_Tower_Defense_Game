@@ -21,6 +21,9 @@
  *   is harder than the one before.
  * - Critters wait in a queue and enter the map one after another at the entry
  *   (findNextCritter()), then walk toward the exit along Map::findPath() (moveAlongPath()).
+ * - By default each path tile holds at most one critter: a critter stays a full
+ *   cell behind the one in front of it, and the next critter does not enter
+ *   while the entry tile is taken. setAllowOverlap(true) lets critters stack.
  * - A critter killed by towers gives the player its reward; a critter that reaches
  *   the exit steals coins. The game collects these with collectCoinsEarned() and
  *   collectCoinsStolen().
@@ -37,11 +40,24 @@ public:
 	CritterGroupGenerator(int waveNb);
 
 	/**
-	 * @brief Moves the next waiting critter onto the map at the entry.
-	 * Does nothing when no critters are waiting.
-	 * @param path The route from Map::findPath(); the critter is placed on path[0] (the entry).
+	 * @brief Chooses whether two critters may occupy the same path tile.
+	 * Overlap is off until this is called. The choice applies to critters
+	 * already on the map as well as those still waiting to enter.
+	 * @param allow True to let critters stack on a tile, false to keep one per tile.
 	 */
-	void findNextCritter(const std::vector<Position> path);
+	void setAllowOverlap(bool allow);
+
+	/** @return True when critters may share a path tile. */
+	bool allowsOverlap() const;
+
+	/**
+	 * @brief Moves the next waiting critter onto the map at the entry.
+	 * Does nothing when no critters are waiting, or when overlap is off and
+	 * another critter is still on the entry tile.
+	 * @param path The route from Map::findPath(); the critter is placed on path[0] (the entry).
+	 * @return True if a critter entered the map.
+	 */
+	bool findNextCritter(const std::vector<Position> path);
 
 	/**
 	 * @brief Moves every critter on the map forward along the path for one frame.
@@ -49,6 +65,7 @@ public:
 	 * For each critter, in this order:
 	 * 1. If it was killed (0 hit points), its reward is added to the coins earned and it is removed.
 	 * 2. Otherwise it moves getSpeed() * dt cells toward the exit (slows included), never backwards.
+	 *    When overlap is off, it stops at the edge of a tile that another critter still occupies.
 	 * 3. If it reaches the exit, the coins it steals are added to the coins stolen and it is removed.
 	 *
 	 * @param path The route from Map::findPath(), entry first and exit last.
@@ -128,6 +145,8 @@ private:
 	 * @return Always 0.
 	 */
 	int addCritterToGroup(Critter crit);
+
+	bool allowOverlap = false; ///< False: at most one critter on each path tile.
 
 	int coinsEarned = 0;     ///< Rewards from killed critters, not yet collected.
 	int coinsStolen = 0;     ///< Coins taken by escaped critters, not yet collected.

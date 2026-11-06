@@ -2,6 +2,7 @@
  * @file CritterGroupGenerator.cpp
  * @brief Implements CritterGroupGenerator. Function docs are in CritterGroupGenerator.h.
  */
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <queue>
@@ -9,6 +10,36 @@
 #include "../Critter/Critter.h"
 #include "../Map/Map.h"
 #include <iostream>
+
+namespace {
+
+/**
+ * @brief Puts critter at progress along path, using the same interpolation as movement.
+ * progress is clamped to the path. The position is updated to match.
+ */
+void placeAlong(Critter& critter, const std::vector<Position>& path, float progress) {
+	const int last = static_cast<int>(path.size()) - 1;
+	if (last < 0) {
+		return;
+	}
+	if (progress < 0.f) {
+		progress = 0.f;
+	}
+	int index = static_cast<int>(progress);
+	if (index >= last) {
+		index = last;
+		progress = static_cast<float>(last);
+	}
+	const float t = progress - static_cast<float>(index);
+	const Position current = path[static_cast<std::size_t>(index)];
+	const Position next = path[static_cast<std::size_t>(std::min(index + 1, last))];
+	critter.setProgress(progress);
+	critter.setPathIndex(index);
+	critter.setPosition(current.row + t * (next.row - current.row),
+	                    current.col + t * (next.col - current.col));
+}
+
+} // namespace
 
 CritterGroupGenerator::CritterGroupGenerator(int waveNb) { // for now, hardcoded to always generate 20 critters. Can be refined to have a percentage-based implementation
 	// Every critter's level is the wave number, so its reward and strength
@@ -29,6 +60,14 @@ CritterGroupGenerator::CritterGroupGenerator(int waveNb) { // for now, hardcoded
 		addCritterToGroup(newCritter);
 	}
 	//create a group of critters, how do we determine the amount/kind of critters?
+}
+
+void CritterGroupGenerator::setAllowOverlap(bool allow) {
+	allowOverlap = allow;
+}
+
+bool CritterGroupGenerator::allowsOverlap() const {
+	return allowOverlap;
 }
 
 int CritterGroupGenerator::addCritterToGroup(Critter crit) {
@@ -83,20 +122,51 @@ void CritterGroupGenerator::moveAlongPath(std::vector<Position> path, float dt) 
 		critter.setPathIndex(currentIndex);
 		critter.setPosition(interpolatedRow, interpolatedCol); // Store as float positions!
 	}
+
+	// One critter per tile: walk from the front of the line backward and stop
+	// anyone who has stepped onto a tile that the critter in front still holds.
+	if (!allowOverlap && activeCritters.size() > 1) {
+		std::vector<std::size_t> order(activeCritters.size());
+		for (std::size_t i = 0; i < order.size(); ++i) {
+			order[i] = i;
+		}
+		std::sort(order.begin(), order.end(), [&](std::size_t a, std::size_t b) {
+			const float progressA = activeCritters[a].getProgress();
+			const float progressB = activeCritters[b].getProgress();
+			if (progressA != progressB) {
+				return progressA > progressB;
+			}
+			return a < b; // the one that entered earlier keeps the tile
+		});
+		for (std::size_t n = 1; n < order.size(); ++n) {
+			// Keep a full cell between critters, so they never touch on screen.
+			const float limit = activeCritters[order[n - 1]].getProgress() - 1.f;
+			Critter& behind = activeCritters[order[n]];
+			if (behind.getProgress() > limit) {
+				placeAlong(behind, path, std::max(0.f, limit));
+			}
+		}
+	}
 }
 
-void CritterGroupGenerator::findNextCritter(const std::vector<Position> path) {
+bool CritterGroupGenerator::findNextCritter(const std::vector<Position> path) {
 
 	if (pendingCritters.empty()) {
-		return;
+		return false;
 	}
-	else {
-		Critter nextCritter = pendingCritters.front();
-		pendingCritters.pop();
-		nextCritter.setPathIndex(0);
-		nextCritter.setPosition(path[0].row, path[0].col);
-		activeCritters.push_back(nextCritter);
+	if (!allowOverlap) {
+		for (Critter& critter : activeCritters) {
+			if (critter.isAlive() && static_cast<int>(critter.getProgress()) <= 0) {
+				return false; // the entry tile is still occupied
+			}
+		}
 	}
+	Critter nextCritter = pendingCritters.front();
+	pendingCritters.pop();
+	nextCritter.setPathIndex(0);
+	nextCritter.setPosition(path[0].row, path[0].col);
+	activeCritters.push_back(nextCritter);
+	return true;
 }
 
 int CritterGroupGenerator::collectCoinsEarned() {
