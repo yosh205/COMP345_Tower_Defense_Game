@@ -606,6 +606,51 @@ void testCritterObserver() {
     CHECK(counter.updates == 3);
 }
 
+void testCritterOverlap() {
+    std::cout << "\n[Critter waves] Overlap can be turned off so one tile holds one critter\n";
+    const std::vector<Position> path = makeStraightMap().findPath();
+
+    CritterGroupGenerator stacked(1);
+    CHECK(stacked.allowsOverlap());
+    CHECK(stacked.findNextCritter(path));
+    CHECK(stacked.findNextCritter(path));  // same entry tile is allowed
+    CHECK(stacked.activeCrittersLeft() == 2);
+
+    CritterGroupGenerator wave(1);
+    wave.setAllowOverlap(false);
+    CHECK(!wave.allowsOverlap());
+    CHECK(wave.findNextCritter(path));
+    CHECK(!wave.findNextCritter(path));  // entry tile is taken
+    CHECK(wave.activeCrittersLeft() == 1);
+
+    while (wave.getActiveCritterPointers().front()->getProgress() < 1.f) {
+        wave.moveAlongPath(path, kFrame);
+    }
+    CHECK(wave.findNextCritter(path));
+    CHECK(wave.activeCrittersLeft() == 2);
+
+    // Long enough for a faster critter to catch a slower one if stacking were allowed.
+    for (int step = 0; step < 4000 && wave.activeCrittersLeft() > 1; ++step) {
+        if (wave.crittersRemaining() > wave.activeCrittersLeft()) {
+            wave.findNextCritter(path);
+        }
+        wave.moveAlongPath(path, kFrame);
+    }
+
+    const std::vector<Critter>& onMap = wave.getActiveCritters();
+    bool sharedTile = false;
+    for (std::size_t i = 0; i < onMap.size(); ++i) {
+        for (std::size_t j = i + 1; j < onMap.size(); ++j) {
+            const int rowI = static_cast<int>(onMap[i].getRow());
+            const int colI = static_cast<int>(onMap[i].getCol());
+            const int rowJ = static_cast<int>(onMap[j].getRow());
+            const int colJ = static_cast<int>(onMap[j].getCol());
+            sharedTile = sharedTile || (rowI == rowJ && colI == colJ);
+        }
+    }
+    CHECK(!sharedTile);
+}
+
 void testWaveEnds() {
     std::cout << "\n[Critter waves] The wave is over once every critter is killed or escaped\n";
     const std::vector<Position> path = makeStraightMap().findPath();
@@ -647,6 +692,7 @@ int main() {
     testWaveSpawning();
     testWaveMovement();
     testWaveCoins();
+    testCritterOverlap();
     testWaveEnds();
 
     std::cout << "\n" << (checks - failures) << " / " << checks << " checks passed\n";

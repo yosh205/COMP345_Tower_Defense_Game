@@ -50,6 +50,10 @@ void Critter::addProgress(float cellsMoved) {
     notify();
 }
 
+void Critter::setProgress(float value) {
+    progress = std::max(0.f, value);
+}
+
 void Critter::setPosition(float row, float col) {
     this->row = row;
     this->col = col;

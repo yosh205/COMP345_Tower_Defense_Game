@@ -289,10 +289,16 @@ int main() {
 
         // Critters only spawn, move and get shot while a wave is running.
         if (state == AppState::Playing && waveInProgress) {
+            wave.setAllowOverlap(hud.crittersCanOverlap());
             spawnTimer += dt;
             if (spawnTimer >= kSpawnInterval) {
-                wave.findNextCritter(map.findPath());
-                spawnTimer = 0.f;
+                // When overlap is off and the entry tile is taken, keep the timer
+                // so the next critter enters on the first free frame.
+                const bool spawned = wave.findNextCritter(map.findPath());
+                const bool noneWaiting = wave.crittersRemaining() == wave.activeCrittersLeft();
+                if (spawned || noneWaiting) {
+                    spawnTimer = 0.f;
+                }
             }
 
             wave.moveAlongPath(map.findPath(), dt);

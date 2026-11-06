@@ -73,6 +73,12 @@ public:
      * @param cellsMoved Distance moved this frame, in cells.
      */
     void addProgress(float cellsMoved);
+    /**
+     * @brief Sets the distance travelled along the path. Used when a critter
+     * must wait because the next tile is already occupied.
+     * @param value Distance from the entry, in cells. Negative values become 0.
+     */
+    void setProgress(float value);
 
     /**
      * @brief How far along the path this critter is (0 = entry).

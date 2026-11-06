@@ -208,7 +208,8 @@ public:
      * @param pos      Mouse position in window pixels.
      * @param selected The selected tower, or nullptr (Upgrade/Sell only work with one).
      * @return Action code: "none", "buy_direct", "buy_area", "buy_slow",
-     *         "upgrade", "sell", "start_wave", "new_map", "toggle_fullscreen".
+     *         "upgrade", "sell", "start_wave", "new_map", "toggle_fullscreen",
+     *         "toggle_overlap".
      *         "new_map" means a new random map, or restarting the chosen hand-built map.
      */
     std::string handlePlayClick(sf::Vector2f pos, const Tower* selected);
@@ -233,6 +234,17 @@ public:
      */
     static int priceOf(ShopSelection item);
 
+    /**
+     * @return True when critters may stand on the same path tile.
+     * The start menu and the play sidebar both change this. Default is true.
+     */
+    bool crittersCanOverlap() const;
+    /**
+     * @brief Sets whether critters may share a path tile.
+     * @param allow True to allow overlap, false to keep one critter per tile.
+     */
+    void setCrittersCanOverlap(bool allow);
+
     /** @return True when the start-menu fullscreen checkbox is on. */
     bool wantsFullscreen() const;
     /**
@@ -250,6 +262,7 @@ private:
     int healthHalves = kHeartsPerWave * 2;  ///< Health left, in half-hearts. 6 = full.
     ShopSelection shopSelection = ShopSelection::None;  ///< Tower type armed for placement.
     bool fullscreenPreferred = false;  ///< Fullscreen option from the menu / F11.
+    bool critterOverlap = true;        ///< True: critters may share a path tile.
     int wave = 0;                 ///< Wave number shown in the sidebar.
     int crittersLeft = 0;         ///< Critters of the wave still in play.
     bool waveInProgress = false;  ///< True while a wave runs.
@@ -300,6 +313,7 @@ private:
     mutable sf::FloatRect colsMinus;          ///< Start menu: columns "-" button.
     mutable sf::FloatRect colsPlus;           ///< Start menu: columns "+" button.
     mutable sf::FloatRect fullscreenBtn;      ///< Start menu: fullscreen on/off button.
+    mutable sf::FloatRect overlapBtn;         ///< Start menu: critter overlap on/off button.
     mutable sf::FloatRect mapDemoBtn;         ///< Start menu: Map Rules Demo button.
     mutable sf::FloatRect mapEditorBtn;       ///< Start menu: Map Editor button.
 
@@ -325,6 +339,7 @@ private:
     mutable sf::FloatRect sellBtn;            ///< Sidebar: sell the selected tower.
     mutable sf::FloatRect newMapBtn;          ///< Sidebar: generate a new map.
     mutable sf::FloatRect playFullscreenBtn;  ///< Sidebar: toggle fullscreen.
+    mutable sf::FloatRect playOverlapBtn;     ///< Sidebar: toggle critter overlap.
     mutable sf::FloatRect startWaveBtn;       ///< Sidebar: Start Wave (empty while a wave runs).
 
     mutable sf::FloatRect gameOverAgainBtn;  ///< Game over: Play Again.

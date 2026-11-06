@@ -65,6 +65,9 @@ void Hud::setWaveInfo(int w, int left, bool inProgress) {
     waveInProgress = inProgress;
 }
 
+bool Hud::crittersCanOverlap() const { return critterOverlap; }
+void Hud::setCrittersCanOverlap(bool allow) { critterOverlap = allow; }
+
 bool Hud::wantsFullscreen() const { return fullscreenPreferred; }
 void Hud::setWantsFullscreen(bool on) { fullscreenPreferred = on; }
 
@@ -185,30 +188,34 @@ void Hud::drawStartMenu(sf::RenderWindow& window) const {
                   sf::Color(120, 140, 160));
     }
 
-    fullscreenBtn = makeRect(px + 80.f, py + 300.f, 320.f, 44.f);
+    fullscreenBtn = makeRect(px + 80.f, py + 300.f, 320.f, 40.f);
     drawButton(window, fullscreenBtn,
                fullscreenPreferred ? "FULLSCREEN ON" : "FULLSCREEN OFF",
                sf::Color(50, 70, 95), fullscreenPreferred);
-    drawLabel(window, "OR PRESS F11 ANYTIME", px + 120.f, py + 352.f, 1.6f,
-              sf::Color(120, 140, 160));
 
-    startBtn = makeRect(px + 90.f, py + 385.f, 300.f, 52.f);
+    // Critters stack on a tile until this is turned off. F11 still toggles fullscreen.
+    overlapBtn = makeRect(px + 80.f, py + 348.f, 320.f, 40.f);
+    drawButton(window, overlapBtn,
+               critterOverlap ? "OVERLAP ON" : "OVERLAP OFF",
+               sf::Color(50, 70, 95), critterOverlap);
+
+    startBtn = makeRect(px + 90.f, py + 396.f, 300.f, 52.f);
     drawButton(window, startBtn, "START GAME", sf::Color(40, 130, 90));
 
     // Opens the editor: a blank map of the chosen size, or a copy of the chosen map.
-    mapEditorBtn = makeRect(px + 90.f, py + 447.f, 300.f, 44.f);
+    mapEditorBtn = makeRect(px + 90.f, py + 458.f, 300.f, 44.f);
     drawButton(window, mapEditorBtn, "MAP EDITOR", sf::Color(40, 100, 120));
 
     // Opens the screen that shows which maps Map::isValid() accepts and rejects.
-    mapDemoBtn = makeRect(px + 90.f, py + 503.f, 300.f, 44.f);
+    mapDemoBtn = makeRect(px + 90.f, py + 510.f, 300.f, 44.f);
     drawButton(window, mapDemoBtn, "MAP RULES DEMO", sf::Color(50, 70, 95));
 
     // Opens the Part 2 driver: a map with a MapObserver that redraws on every change.
-    mapObserverDemoBtn = makeRect(px + 90.f, py + 555.f, 300.f, 44.f);
+    mapObserverDemoBtn = makeRect(px + 90.f, py + 562.f, 300.f, 44.f);
     drawButton(window, mapObserverDemoBtn, "MAP OBSERVER DEMO", sf::Color(50, 70, 95));
 
     // Opens the Part 3 driver: critters with a CritterObserver that redraws on every change.
-    critterObserverDemoBtn = makeRect(px + 90.f, py + 607.f, 300.f, 44.f);
+    critterObserverDemoBtn = makeRect(px + 90.f, py + 614.f, 300.f, 44.f);
     drawButton(window, critterObserverDemoBtn, "CRITTER OBSERVER DEMO", sf::Color(50, 70, 95));
 }
 
@@ -240,6 +247,10 @@ bool Hud::handleStartClick(sf::Vector2f pos) {
     }
     if (contains(fullscreenBtn, pos)) {
         fullscreenPreferred = !fullscreenPreferred;
+        return false;
+    }
+    if (contains(overlapBtn, pos)) {
+        critterOverlap = !critterOverlap;
         return false;
     }
     return contains(startBtn, pos);
@@ -364,6 +375,11 @@ void Hud::drawPlayHud(sf::RenderWindow& window, const Tower* selected) const {
     drawButton(window, playFullscreenBtn,
                fullscreenPreferred ? "WINDOWED" : "FULLSCREEN",
                sf::Color(50, 70, 95));
+    y += 48.f;
+    playOverlapBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
+    drawButton(window, playOverlapBtn,
+               critterOverlap ? "OVERLAP ON" : "OVERLAP OFF",
+               sf::Color(50, 70, 95), critterOverlap);
     y += 36.f;
 }
 
@@ -400,6 +416,10 @@ std::string Hud::handlePlayClick(sf::Vector2f pos, const Tower* selected) {
     }
     if (contains(playFullscreenBtn, pos)) {
         return "toggle_fullscreen";
+    }
+    if (contains(playOverlapBtn, pos)) {
+        critterOverlap = !critterOverlap;
+        return "toggle_overlap";
     }
     return "none";
 }
