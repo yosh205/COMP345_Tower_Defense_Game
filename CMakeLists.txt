@@ -49,7 +49,7 @@ add_executable(towerdefense
     src/GUI/MapObserverDriver.cpp
     src/Critter/CritterObserver.cpp
     src/Critter/CritterObserverDriver.cpp
-)
+ "src/Critter/CritterFactory.cpp"      )
 
 target_include_directories(towerdefense PRIVATE src)
 target_link_libraries(towerdefense PRIVATE sfml-graphics)
@@ -77,7 +77,7 @@ add_executable(tests
     src/Tower/TowerObserver.cpp
     src/Tower/TowerObserverDriver.cpp
     src/Observer/Observable.cpp
-)
+ "src/Critter/CritterFactory.cpp"      )
 target_include_directories(tests PRIVATE src)
 
 enable_testing()

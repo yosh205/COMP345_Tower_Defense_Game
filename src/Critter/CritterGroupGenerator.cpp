@@ -10,6 +10,7 @@
 #include "../Critter/Critter.h"
 #include "../Map/Map.h"
 #include <iostream>
+#include "CritterFactory.h"
 
 namespace {
 
@@ -46,17 +47,17 @@ CritterGroupGenerator::CritterGroupGenerator(int waveNb) { // for now, hardcoded
 	// (calculated by Critter from the level) grow with each wave.
 	//Normal Critters
 	for (int i = 0; i < 10; i++) {
-		Critter newCritter(CritterKind::Normal, static_cast<int>(100.f*(1.f+(waveNb/10.0))), 0.4+(0.1*waveNb), 0, 0, waveNb);
+		Critter newCritter = CritterFactory::createCritter(CritterKind::Normal, waveNb);
 		addCritterToGroup(newCritter);
 	}
 	//Armored Critters
 	for (int i = 0; i < 5; i++) {
-		Critter newCritter(CritterKind::Armored, static_cast<int>(130.f * (1.f + (waveNb / 10.0))), 0.2 + (0.1 * waveNb), 0, 0, waveNb);
+		Critter newCritter = CritterFactory::createCritter(CritterKind::Armored, waveNb);
 		addCritterToGroup(newCritter);
 	}
 	//Fast Critters
 	for (int i = 0; i < 5; i++) {
-		Critter newCritter(CritterKind::Fast, static_cast<int>(80.f * (1.f + (waveNb / 10.0))), 0.8 + (0.1 * waveNb), 0, 0, waveNb);
+		Critter newCritter = CritterFactory::createCritter(CritterKind::Fast, waveNb);
 		addCritterToGroup(newCritter);
 	}
 	//create a group of critters, how do we determine the amount/kind of critters?
