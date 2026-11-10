@@ -7,6 +7,7 @@
  */
 #include "CritterView.h"
 #include <algorithm>
+#include "SimpleText.h"
 
 namespace {
 	
@@ -26,24 +27,65 @@ sf::Color CritterView::getColorForKind(CritterKind kind) const {
 	}
 }
 
+int CritterView::pickCritterId(const std::vector<Critter>& critters, sf::Vector2f mouse,float cellSize,
+    float originX,float originY){
+    // Click radius: a little bigger than the drawn critter, so it is easy to hit.
+    float bestDistance = cellSize * 0.4f;
+    int bestId = -1;
+    for (const Critter& critter : critters) {
+        if (!critter.isAlive()) {
+            continue;
+        }
+        const sf::Vector2f c = cellCenter(critter, cellSize, originX, originY);
+        const float distance = std::hypot(mouse.x - c.x, mouse.y - c.y); // finding how far the mouse is to this critterView
+        if (distance <= bestDistance) { // if the click is within a certain range of the cellsize
+            bestDistance = distance;
+            bestId = critter.getId();
+        }
+    }
+    return bestId;
+}
+
+
 void CritterView::draw(sf::RenderWindow& window,
 						const std::vector<Critter>& critters,
 						float cellSize,
 						float originX,
-						float originY) const {
+						float originY, int selectedId) const {
     for (const auto& critter : critters) {
-		drawOne(window, critter, cellSize, originX, originY);
+		drawOne(window, critter, cellSize, originX, originY, critter.getId()==selectedId);
 	}
 }
 
+const Critter* CritterView::findById(const std::vector<Critter>& critters, int id) {
+    for (const Critter& critter : critters) {
+        if (critter.getId() == id && critter.isAlive()) {
+            return &critter;
+        }
+    }
+    return nullptr;
+}
+
+
 void CritterView::drawOne(sf::RenderWindow& window, const Critter& critter,
-							float cellSize, float originX, float originY) const {
+							float cellSize, float originX, float originY, bool selected) const {
 	if (!critter.isAlive()) {
 		return;
 	}
 
 	const sf::Vector2f c = cellCenter(critter, cellSize, originX, originY);
 	const float s = cellSize;
+
+    // Selection ring (the critter being inspected), drawn behind the critter.
+    if (selected) {
+        sf::CircleShape ring(s * 0.38f);
+        ring.setOrigin(ring.getRadius(), ring.getRadius());
+        ring.setPosition(c);
+        ring.setFillColor(sf::Color::Transparent);
+        ring.setOutlineThickness(2.f);
+        ring.setOutlineColor(sf::Color::White);
+        window.draw(ring);
+    }
 
 	// 1. Render Critter Base Silhouette by Kind
 	const CritterKind kind = critter.getKind();
@@ -133,3 +175,46 @@ void CritterView::drawOne(sf::RenderWindow& window, const Critter& critter,
     hpFill.setFillColor((ratio > 0.4f) ? sf::Color(60, 220, 80) : sf::Color(230, 60, 50));
     window.draw(hpFill);
 }
+
+void CritterView::drawCharacteristics(sf::RenderWindow& window, const Critter& critter,
+    float originX, float originY, float width, float height) {
+    // Panel background, in the same colours as the sidebar.
+    sf::RectangleShape box(sf::Vector2f(width, height));
+    box.setPosition(originX, originY);
+    box.setFillColor(sf::Color(32, 40, 54));
+    box.setOutlineThickness(2.f);
+    box.setOutlineColor(sf::Color(55, 75, 100));
+    window.draw(box);
+
+    // Only A-Z, 0-9, space and $ / + - . : ( ) % < > exist in SimpleText's font,
+    // and it has no line breaks: so one string per line, each drawn at its own y.
+    const char* kindName = "NORMAL";
+    if (critter.getKind() == CritterKind::Armored) {
+        kindName = "ARMORED";
+    }
+    else if (critter.getKind() == CritterKind::Fast) {
+        kindName = "FAST";
+    }
+    const std::vector<std::string> lines = {
+        std::string("CRITTER: ") + kindName,
+        "LEVEL: " + std::to_string(critter.getLevel()),
+        "HP: " + std::to_string(critter.getHitPoints()) + "/" + std::to_string(critter.getMaxHitPoints()),
+        "STRENGTH: " + std::to_string(critter.getStrength()),
+        "REWARD: $" + std::to_string(critter.getReward()),
+        "STEALS $" + std::to_string(critter.getCoinsStolen()) + " AT EXIT",
+    };
+
+    const float scale = 2.f;
+    const float lineStep = 7.f * scale + 6.f; // glyph height + gap
+    const float padding = 12.f;
+    float y = originY + padding;
+    for (std::size_t i = 0; i < lines.size(); ++i) {
+        // First line (the title) uses the critter's own colour.
+        /*CritterKind ck = critter.getKind();
+        const sf::Color color = (i == 0) ? getColorForKind(ck)
+            : sf::Color(200, 212, 225);*/
+        SimpleText::draw(window, lines[i], originX + padding, y, scale, sf::Color::White);
+        y += lineStep;
+    }
+}
+
