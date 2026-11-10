@@ -90,7 +90,7 @@ ctest --test-dir build --output-on-failure
 
 # Or with g++ only
 g++ -std=c++17 -Wall -Isrc tests/tests.cpp src/Map/*.cpp src/Tower/*.cpp src/Observer/*.cpp \
-    src/Critter/Critter.cpp src/Critter/CritterGroupGenerator.cpp -o tests_run
+    src/Critter/Critter.cpp src/Critter/CritterGroupGenerator.cpp src/Critter/CritterFactory.cpp -o tests_run
 ./tests_run
 ```
 
