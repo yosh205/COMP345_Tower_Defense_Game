@@ -85,11 +85,11 @@ public:
     bool handleStartClick(sf::Vector2f pos);
 
     /**
-     * @brief Checks whether a start-menu click hit the Map Rules Demo button.
+     * @brief Checks whether a start-menu click hit the Demos button.
      * @param pos Mouse position in window pixels.
-     * @return true if the player clicked Map Rules Demo.
+     * @return true if the player clicked Demos.
      */
-    bool clickedMapDemo(sf::Vector2f pos) const;
+    bool clickedDemos(sf::Vector2f pos) const;
 
     /**
      * @brief Checks whether a start-menu click hit the Map Editor button.
@@ -121,19 +121,21 @@ public:
      */
     std::string handleMapEditorClick(sf::Vector2f pos) const;
 
+    // --- Demos screen ---
     /**
-     * @brief Checks whether a start-menu click hit the Map Observer Demo button.
-     * @param pos Mouse position in window pixels.
-     * @return true if the player clicked Map Observer Demo.
+     * @brief Draws the demos screen: one button per assignment driver
+     * (Assignment 2: Observer; Assignment 3: Strategy, Factory, Decorator) and Back.
+     * @param window The window to draw into.
      */
-    bool clickedMapObserverDemo(sf::Vector2f pos) const;
+    void drawDemos(sf::RenderWindow& window) const;
 
     /**
-     * @brief Checks whether a start-menu click hit the Critter Observer Demo button.
+     * @brief Handles a click on the demos screen.
      * @param pos Mouse position in window pixels.
-     * @return true if the player clicked Critter Observer Demo.
+     * @return "map_rules", "map_observer", "critter_observer", "tower_strategy",
+     *         "critter_factory", "tower_decorator", "back" or "none".
      */
-    bool clickedCritterObserverDemo(sf::Vector2f pos) const;
+    std::string handleDemosClick(sf::Vector2f pos) const;
 
     // --- Map rules demo ---
     /**
@@ -197,7 +199,14 @@ public:
     void setWaveInfo(int wave, int crittersLeft, bool inProgress);
 
     /**
-     * @brief Draws the sidebar: gold, wave, shop, selected tower (stats, Upgrade, Sell) and actions.
+     * @brief Sets the targeting strategy name shown on the selected tower's TARGET button.
+     * @param name Short name in capitals, e.g. "NEAREST EXIT".
+     */
+    void setTargetingName(const std::string& name);
+
+    /**
+     * @brief Draws the sidebar: gold, wave, shop, selected tower (stats, targeting,
+     * special effects, Upgrade, Sell) and actions.
      * @param window   The window to draw into.
      * @param selected The selected tower, or nullptr to hide the tower section.
      */
@@ -209,7 +218,8 @@ public:
      * @param selected The selected tower, or nullptr (Upgrade/Sell only work with one).
      * @return Action code: "none", "buy_direct", "buy_area", "buy_slow",
      *         "upgrade", "sell", "start_wave", "new_map", "toggle_fullscreen",
-     *         "toggle_overlap".
+     *         "toggle_overlap", "cycle_strategy" (TARGET button), "add_splash",
+     *         "add_burning", "add_freezing".
      *         "new_map" means a new random map, or restarting the chosen hand-built map.
      */
     std::string handlePlayClick(sf::Vector2f pos, const Tower* selected);
@@ -264,6 +274,7 @@ private:
     ShopSelection shopSelection = ShopSelection::None;  ///< Tower type armed for placement.
     bool fullscreenPreferred = false;  ///< Fullscreen option from the menu / F11.
     bool critterOverlap = false;       ///< True: critters may share a path tile.
+    std::string targetingName = "NEAREST EXIT";  ///< Selected tower's strategy, shown on TARGET.
     int wave = 0;                 ///< Wave number shown in the sidebar.
     int crittersLeft = 0;         ///< Critters of the wave still in play.
     bool waveInProgress = false;  ///< True while a wave runs.
@@ -315,8 +326,16 @@ private:
     mutable sf::FloatRect colsPlus;           ///< Start menu: columns "+" button.
     mutable sf::FloatRect fullscreenBtn;      ///< Start menu: fullscreen on/off button.
     mutable sf::FloatRect overlapBtn;         ///< Start menu: critter overlap on/off button.
-    mutable sf::FloatRect mapDemoBtn;         ///< Start menu: Map Rules Demo button.
     mutable sf::FloatRect mapEditorBtn;       ///< Start menu: Map Editor button.
+    mutable sf::FloatRect demosBtn;           ///< Start menu: Demos button.
+
+    mutable sf::FloatRect demoMapRulesBtn;        ///< Demos: Map Rules (Assignment 1).
+    mutable sf::FloatRect demoMapObserverBtn;     ///< Demos: Map Observer (Assignment 2).
+    mutable sf::FloatRect demoCritterObserverBtn; ///< Demos: Critter Observer (Assignment 2).
+    mutable sf::FloatRect demoStrategyBtn;        ///< Demos: Tower Strategy (Assignment 3).
+    mutable sf::FloatRect demoFactoryBtn;         ///< Demos: Critter Factory (Assignment 3).
+    mutable sf::FloatRect demoDecoratorBtn;       ///< Demos: Tower Decorator (Assignment 3).
+    mutable sf::FloatRect demosBackBtn;           ///< Demos: back to the start menu.
 
     mutable sf::FloatRect editorPathBtn;      ///< Map editor: Path tool.
     mutable sf::FloatRect editorEntryBtn;     ///< Map editor: Entry tool.
@@ -326,8 +345,6 @@ private:
     mutable sf::FloatRect editorSaveBtn;      ///< Map editor: add the map to the start menu.
     mutable sf::FloatRect editorPlayBtn;      ///< Map editor: play the map.
     mutable sf::FloatRect editorBackBtn;      ///< Map editor: back to the start menu.
-    mutable sf::FloatRect mapObserverDemoBtn; ///< Start menu: Map Observer Demo button.
-    mutable sf::FloatRect critterObserverDemoBtn; ///< Start menu: Critter Observer Demo button.
 
     mutable sf::FloatRect demoPrevBtn;        ///< Map demo: previous example.
     mutable sf::FloatRect demoNextBtn;        ///< Map demo: next example.
@@ -338,6 +355,10 @@ private:
     mutable sf::FloatRect shopSlow;           ///< Sidebar: buy Slow tower.
     mutable sf::FloatRect upgradeBtn;         ///< Sidebar: upgrade the selected tower.
     mutable sf::FloatRect sellBtn;            ///< Sidebar: sell the selected tower.
+    mutable sf::FloatRect targetingBtn;       ///< Sidebar: change the selected tower's strategy.
+    mutable sf::FloatRect splashBtn;          ///< Sidebar: add splash to the selected tower.
+    mutable sf::FloatRect burningBtn;         ///< Sidebar: add burning to the selected tower.
+    mutable sf::FloatRect freezingBtn;        ///< Sidebar: add freezing to the selected tower.
     mutable sf::FloatRect newMapBtn;          ///< Sidebar: generate a new map.
     mutable sf::FloatRect playFullscreenBtn;  ///< Sidebar: toggle fullscreen.
     mutable sf::FloatRect playOverlapBtn;     ///< Sidebar: toggle critter overlap.

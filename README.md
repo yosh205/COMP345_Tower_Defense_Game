@@ -120,18 +120,23 @@ Everything is in-game menus (no console prompts):
    **VALID** (`Map::isValid()`) or what is missing, and warns about path cells critters never walk
    on. **Save** adds the map to the start menu as CUSTOM 1, CUSTOM 2, …; **Play this map** saves
    it and starts a game on it. Saved maps last until the program is closed.
-   **Map Rules Demo** shows seven hand-built maps (one valid, six that each break one map
+   **Demos** opens a screen with every assignment's driver:
+   **Map Rules** shows seven hand-built maps (one valid, six that each break one map
    rule) with the result of `Map::isValid()`; use Prev/Next or the arrow keys, Esc to go back.
-   **Map Observer Demo** opens a window with a `MapObserver` attached to a map. Each key
+   **Map Observer** opens a window with a `MapObserver` attached to a map. Each key
    changes the map and the observer redraws it (the console counts the updates):
    **P** place a tower, **M** move it, **R** remove it, **C** switch a cell between scenery
    and path, **N** assign a new map, **Esc** go back. A change that is not allowed
    (e.g. placing a second tower on the same cell) leaves the map unchanged and causes no update.
-   **Critter Observer Demo** opens a window with a `CritterObserver`: **A** add a critter,
+   **Critter Observer** opens a window with a `CritterObserver`: **A** add a critter,
    **R** remove one, **D** damage the first, **M** move them along the path, **Esc** go back.
    Each change redraws the window and prints the critter view in the console.
+   **Tower Strategy**, **Critter Factory** and **Tower Decorator** are the Assignment 3 drivers
+   (in progress).
 2. **Shop** (right panel) — click Direct / Area / Slow, then click a green scenery cell to place
-3. **Select tower** — click it on the map to see its range and stats, **Upgrade** / **Sell**
+3. **Select tower** — click it on the map to see its range, power and rate of fire, **Upgrade** / **Sell**.
+   **Target** changes which critter it shoots, and **Splash** / **Burn** / **Freeze** add special
+   effects (Assignment 3, in progress)
 4. **Start Wave** — sidebar button; critters enter one per second. While a wave runs the
    sidebar shows how many critters are left; when it ends, the button returns for the next, harder wave.
    Each wave starts with **3 hearts**. A critter that reaches the exit removes half a heart.
@@ -222,7 +227,7 @@ without a window (see `tests/tests.cpp`).
 | `src/Tower` | `Tower` (abstract), `DirectDamageTower`, `AreaDamageTower`, `SlowingTower`, `TowerObserver`, `TowerObserverDriver` | Costs, levels, upgrade/sell, detect → select → shoot. Subclasses only change the shot's effect (`fireAt()`). `Tower` is an Observable; `TowerObserverDriver` plugs in a `TowerObserver` and upgrades the tower so the view is printed again after each change |
 | `src/Observer` | `Observable`, `Observer` | Subject/observer base. `attach` / `detach` / `notify` |
 | `src/Critter` | `Critter`, `CritterGroupGenerator`, `CritterObserver`, `CritterObserverDriver` | Critter stats and effects; creating a wave, spawning, moving along the path, rewards and theft. `Critter` is an Observable; `CritterObserver` prints and redraws the watched critters on every change; `CritterObserverDriver` is the Critter Observer Demo |
-| `src/GUI` | `MapView`, `TowerView`, `CritterView`, `Hud`, `MapObserver`, `MapObserverDriver` | Drawing with SFML and the menus/sidebar. Views only read the game objects. `MapObserver` redraws the map in a window on every change; `MapObserverDriver` is the Map Observer Demo |
+| `src/GUI` | `MapView`, `TowerView`, `CritterView`, `Hud`, `MapObserver`, `MapObserverDriver` | Drawing with SFML and the menus/sidebar. Views only read the game objects. `MapObserver` redraws the map in a window on every change; `MapObserverDriver` is the Map Observer demo |
 | `src/main.cpp` | — | Driver: runs the tower observer driver in the console, then the start menu, then each frame spawn → move → pay coins and hearts → towers shoot → draw. At 0 hearts, the game over screen |
 
 ```
@@ -265,8 +270,8 @@ again each time `update()` is called; the controller (a driver or the game) chan
 | Part | Model (Observable) | View (Observer) | Notifies on | Driver |
 |---|---|---|---|---|
 | 1 — Tower | `Tower` | `TowerObserver`: prints the tower's type, cell, level, range, power, rate of fire and refund value | `upgrade()` | `TowerObserverDriver`, run in the console when the game starts |
-| 2 — Map | `Map` | `MapObserver`: redraws the map and its towers in a window | `setCell()`, `placeTower()`, `moveTower()`, `removeTower()`, `operator=` | `MapObserverDriver`: **Map Observer Demo** button on the start screen |
-| 3 — Critter | `Critter` | `CritterObserver`: prints each critter's kind, health, speed and position, and redraws the watched critters on the map in a window; adding (`plugInto()`) or removing (`unplug()`) a critter also redisplays the view | `takeDamage()`, `applySlow()`, `updateEffects()`, `addProgress()`, `setPosition()`, `setPathIndex()` | `CritterObserverDriver`: **Critter Observer Demo** button on the start screen |
+| 2 — Map | `Map` | `MapObserver`: redraws the map and its towers in a window | `setCell()`, `placeTower()`, `moveTower()`, `removeTower()`, `operator=` | `MapObserverDriver`: **Demos → Map Observer** |
+| 3 — Critter | `Critter` | `CritterObserver`: prints each critter's kind, health, speed and position, and redraws the watched critters on the map in a window; adding (`plugInto()`) or removing (`unplug()`) a critter also redisplays the view | `takeDamage()`, `applySlow()`, `updateEffects()`, `addProgress()`, `setPosition()`, `setPathIndex()` | `CritterObserverDriver`: **Demos → Critter Observer** |
 
 `tests/tests.cpp` checks that each change notifies the observer exactly once, that
 refused changes and detached observers get no update, and that copies start with no observers.

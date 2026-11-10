@@ -6,6 +6,7 @@
 #include "SimpleText.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
 
@@ -15,6 +16,12 @@ bool contains(const sf::FloatRect& r, sf::Vector2f p) {
 
 sf::FloatRect makeRect(float x, float y, float w, float h) {
     return sf::FloatRect(x, y, w, h);
+}
+
+/** @return value with one decimal, e.g. "2.5" (std::to_string would give "2.500000"). */
+std::string oneDecimal(float value) {
+    const int tenths = static_cast<int>(std::lround(value * 10.f));
+    return std::to_string(tenths / 10) + "." + std::to_string(tenths % 10);
 }
 
 } // namespace
@@ -137,8 +144,8 @@ void Hud::drawStartMenu(sf::RenderWindow& window) const {
     bg.setFillColor(sf::Color(18, 24, 32));
     window.draw(bg);
 
-    sf::RectangleShape panel(sf::Vector2f(480.f, 690.f));
-    panel.setPosition((w - 480.f) * 0.5f, (h - 690.f) * 0.5f);
+    sf::RectangleShape panel(sf::Vector2f(480.f, 590.f));
+    panel.setPosition((w - 480.f) * 0.5f, (h - 590.f) * 0.5f);
     panel.setFillColor(sf::Color(28, 38, 52));
     panel.setOutlineThickness(2.f);
     panel.setOutlineColor(sf::Color(70, 110, 150));
@@ -206,17 +213,9 @@ void Hud::drawStartMenu(sf::RenderWindow& window) const {
     mapEditorBtn = makeRect(px + 90.f, py + 458.f, 300.f, 44.f);
     drawButton(window, mapEditorBtn, "MAP EDITOR", sf::Color(40, 100, 120));
 
-    // Opens the screen that shows which maps Map::isValid() accepts and rejects.
-    mapDemoBtn = makeRect(px + 90.f, py + 510.f, 300.f, 44.f);
-    drawButton(window, mapDemoBtn, "MAP RULES DEMO", sf::Color(50, 70, 95));
-
-    // Opens the Part 2 driver: a map with a MapObserver that redraws on every change.
-    mapObserverDemoBtn = makeRect(px + 90.f, py + 562.f, 300.f, 44.f);
-    drawButton(window, mapObserverDemoBtn, "MAP OBSERVER DEMO", sf::Color(50, 70, 95));
-
-    // Opens the Part 3 driver: critters with a CritterObserver that redraws on every change.
-    critterObserverDemoBtn = makeRect(px + 90.f, py + 614.f, 300.f, 44.f);
-    drawButton(window, critterObserverDemoBtn, "CRITTER OBSERVER DEMO", sf::Color(50, 70, 95));
+    // Opens the screen with every assignment's driver (map rules, observers, patterns).
+    demosBtn = makeRect(px + 90.f, py + 510.f, 300.f, 44.f);
+    drawButton(window, demosBtn, "DEMOS", sf::Color(50, 70, 95));
 }
 
 bool Hud::handleStartClick(sf::Vector2f pos) {
@@ -305,82 +304,105 @@ void Hud::drawPlayHud(sf::RenderWindow& window, const Tower* selected) const {
     drawLabel(window, "SHOP", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
     y += 22.f;
 
-    shopDirect = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 44.f);
+    // Buttons are 36-40 px tall so that everything, with a tower selected,
+    // still fits in a 720 px window.
+    const float fullW = kSidebarWidth - 28.f;
+    shopDirect = makeRect(x + 14.f, y, fullW, 40.f);
     drawButton(window, shopDirect,
                "DIRECT $" + std::to_string(priceOf(ShopSelection::Direct)),
                sf::Color(55, 58, 68), shopSelection == ShopSelection::Direct);
-    y += 52.f;
+    y += 46.f;
 
-    shopArea = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 44.f);
+    shopArea = makeRect(x + 14.f, y, fullW, 40.f);
     drawButton(window, shopArea,
                "AREA $" + std::to_string(priceOf(ShopSelection::Area)),
                sf::Color(150, 75, 20), shopSelection == ShopSelection::Area);
-    y += 52.f;
+    y += 46.f;
 
-    shopSlow = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 44.f);
+    shopSlow = makeRect(x + 14.f, y, fullW, 40.f);
     drawButton(window, shopSlow,
                "SLOW $" + std::to_string(priceOf(ShopSelection::Slow)),
                sf::Color(40, 110, 160), shopSelection == ShopSelection::Slow);
-    y += 60.f;
+    y += 52.f;
 
     if (selected != nullptr) {
         drawLabel(window,
                   selected->getTypeName() + " LV" + std::to_string(selected->getLevel()),
                   x + 18.f, y, 2.f, sf::Color::White);
-        y += 24.f;
+        y += 22.f;
         drawLabel(window,
-                  "RNG " + std::to_string(static_cast<int>(selected->getRange() * 10) / 10) +
-                      "  POW " + std::to_string(selected->getPower()),
-                  x + 18.f, y, 1.7f, sf::Color(180, 195, 210));
-        y += 28.f;
+                  "RNG " + oneDecimal(selected->getRange()) +
+                      " POW " + std::to_string(selected->getPower()) +
+                      " FIRE " + oneDecimal(selected->getFireRate()),
+                  x + 18.f, y, 1.6f, sf::Color(180, 195, 210));
+        y += 22.f;
+
+        // Assignment 3, Part 1: which critter the tower shoots (Strategy pattern).
+        drawLabel(window, "TARGET", x + 18.f, y + 11.f, 1.6f, sf::Color(160, 175, 195));
+        targetingBtn = makeRect(x + 84.f, y, kSidebarWidth - 98.f, 36.f);
+        drawButton(window, targetingBtn, targetingName, sf::Color(40, 100, 120));
+        y += 42.f;
+
+        // Assignment 3, Part 3: special effects added as decorators.
+        const float thirdW = (fullW - 16.f) / 3.f;
+        splashBtn = makeRect(x + 14.f, y, thirdW, 36.f);
+        drawButton(window, splashBtn, "SPLASH", sf::Color(150, 75, 20));
+        burningBtn = makeRect(x + 14.f + thirdW + 8.f, y, thirdW, 36.f);
+        drawButton(window, burningBtn, "BURN", sf::Color(170, 55, 40));
+        freezingBtn = makeRect(x + 14.f + 2.f * (thirdW + 8.f), y, thirdW, 36.f);
+        drawButton(window, freezingBtn, "FREEZE", sf::Color(40, 110, 160));
+        y += 42.f;
 
         const bool canUp = selected->canUpgrade();
-        upgradeBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
+        upgradeBtn = makeRect(x + 14.f, y, fullW, 36.f);
         drawButton(window, upgradeBtn,
                    canUp ? ("UPGRADE $" + std::to_string(selected->getUpgradeCost()))
                          : "MAX LEVEL",
                    canUp ? sf::Color(50, 120, 80) : sf::Color(60, 65, 75));
-        y += 48.f;
+        y += 42.f;
 
-        sellBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
+        sellBtn = makeRect(x + 14.f, y, fullW, 36.f);
         drawButton(window, sellBtn,
                    "SELL +$" + std::to_string(selected->getRefundValue()),
                    sf::Color(140, 55, 55));
-        y += 54.f;
+        y += 48.f;
     } else {
         upgradeBtn = sf::FloatRect();
         sellBtn = sf::FloatRect();
+        targetingBtn = sf::FloatRect();
+        splashBtn = sf::FloatRect();
+        burningBtn = sf::FloatRect();
+        freezingBtn = sf::FloatRect();
     }
 
     drawLabel(window, "ACTIONS", x + 18.f, y, 2.f, sf::Color(160, 175, 195));
-    y += 24.f;
+    y += 22.f;
     if (waveInProgress) {
         // While a wave runs there is no button (an empty rect cannot be
         // clicked); show how many critters are still in play instead.
         startWaveBtn = sf::FloatRect();
         drawLabel(window, "CRITTERS LEFT: " + std::to_string(crittersLeft),
-                  x + 18.f, y + 12.f, 2.f, sf::Color(230, 120, 230));
+                  x + 18.f, y + 11.f, 2.f, sf::Color(230, 120, 230));
     } else {
-        startWaveBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
+        startWaveBtn = makeRect(x + 14.f, y, fullW, 36.f);
         drawButton(window, startWaveBtn, "START WAVE " + std::to_string(wave + 1),
                    sf::Color(120, 50, 140));
     }
-    y += 48.f;
-    newMapBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
+    y += 42.f;
+    newMapBtn = makeRect(x + 14.f, y, fullW, 36.f);
     // A random map is replaced by a new one; a hand-built map starts over.
     drawButton(window, newMapBtn, mapChoice == 0 ? "NEW MAP" : "RESTART MAP",
                sf::Color(50, 70, 95));
-    y += 48.f;
-    playFullscreenBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
+    y += 42.f;
+    playFullscreenBtn = makeRect(x + 14.f, y, fullW, 36.f);
     drawButton(window, playFullscreenBtn,
                fullscreenPreferred ? "WINDOWED" : "FULLSCREEN",
                sf::Color(50, 70, 95));
-    y += 48.f;
-    playOverlapBtn = makeRect(x + 14.f, y, kSidebarWidth - 28.f, 40.f);
+    y += 42.f;
+    playOverlapBtn = makeRect(x + 14.f, y, fullW, 36.f);
     drawButton(window, playOverlapBtn,
                critterOverlap ? "OVERLAP ON" : "OVERLAP OFF",
                sf::Color(50, 70, 95), critterOverlap);
-    y += 36.f;
 }
 
 std::string Hud::handlePlayClick(sf::Vector2f pos, const Tower* selected) {
@@ -407,6 +429,18 @@ std::string Hud::handlePlayClick(sf::Vector2f pos, const Tower* selected) {
     }
     if (selected != nullptr && contains(sellBtn, pos)) {
         return "sell";
+    }
+    if (selected != nullptr && contains(targetingBtn, pos)) {
+        return "cycle_strategy";
+    }
+    if (selected != nullptr && contains(splashBtn, pos)) {
+        return "add_splash";
+    }
+    if (selected != nullptr && contains(burningBtn, pos)) {
+        return "add_burning";
+    }
+    if (selected != nullptr && contains(freezingBtn, pos)) {
+        return "add_freezing";
     }
     if (contains(startWaveBtn, pos)) {
         return "start_wave";
@@ -471,8 +505,8 @@ std::string Hud::handleGameOverClick(sf::Vector2f pos) const {
     return "none";
 }
 
-bool Hud::clickedMapDemo(sf::Vector2f pos) const {
-    return contains(mapDemoBtn, pos);
+bool Hud::clickedDemos(sf::Vector2f pos) const {
+    return contains(demosBtn, pos);
 }
 
 void Hud::drawMapDemo(sf::RenderWindow& window, const std::string& name,
@@ -551,13 +585,61 @@ std::string Hud::handleMapDemoClick(sf::Vector2f pos) const {
     return "none";
 }
 
-bool Hud::clickedMapObserverDemo(sf::Vector2f pos) const {
-    return contains(mapObserverDemoBtn, pos);
+void Hud::drawDemos(sf::RenderWindow& window) const {
+    const float w = static_cast<float>(window.getSize().x);
+    const float h = static_cast<float>(window.getSize().y);
+
+    sf::RectangleShape bg(sf::Vector2f(w, h));
+    bg.setFillColor(sf::Color(18, 24, 32));
+    window.draw(bg);
+
+    // Same panel style as the start menu.
+    sf::RectangleShape panel(sf::Vector2f(480.f, 560.f));
+    panel.setPosition((w - 480.f) * 0.5f, (h - 560.f) * 0.5f);
+    panel.setFillColor(sf::Color(28, 38, 52));
+    panel.setOutlineThickness(2.f);
+    panel.setOutlineColor(sf::Color(70, 110, 150));
+    window.draw(panel);
+
+    const float px = panel.getPosition().x;
+    const float py = panel.getPosition().y;
+    drawLabel(window, "DEMOS", px + 195.f, py + 28.f, 3.f, sf::Color(220, 235, 255));
+
+    // Assignments 1 and 2: map rules and the Observer pattern.
+    drawLabel(window, "MAP AND OBSERVER", px + 40.f, py + 80.f, 2.f, sf::Color(160, 175, 195));
+    demoMapRulesBtn = makeRect(px + 90.f, py + 104.f, 300.f, 40.f);
+    drawButton(window, demoMapRulesBtn, "MAP RULES", sf::Color(50, 70, 95));
+    demoMapObserverBtn = makeRect(px + 90.f, py + 150.f, 300.f, 40.f);
+    drawButton(window, demoMapObserverBtn, "MAP OBSERVER", sf::Color(50, 70, 95));
+    demoCritterObserverBtn = makeRect(px + 90.f, py + 196.f, 300.f, 40.f);
+    drawButton(window, demoCritterObserverBtn, "CRITTER OBSERVER", sf::Color(50, 70, 95));
+
+    // Assignment 3: Strategy, Factory and Decorator patterns.
+    drawLabel(window, "DESIGN PATTERNS", px + 40.f, py + 262.f, 2.f, sf::Color(160, 175, 195));
+    demoStrategyBtn = makeRect(px + 90.f, py + 286.f, 300.f, 40.f);
+    drawButton(window, demoStrategyBtn, "TOWER STRATEGY", sf::Color(40, 100, 120));
+    demoFactoryBtn = makeRect(px + 90.f, py + 332.f, 300.f, 40.f);
+    drawButton(window, demoFactoryBtn, "CRITTER FACTORY", sf::Color(40, 100, 120));
+    demoDecoratorBtn = makeRect(px + 90.f, py + 378.f, 300.f, 40.f);
+    drawButton(window, demoDecoratorBtn, "TOWER DECORATOR", sf::Color(40, 100, 120));
+
+    demosBackBtn = makeRect(px + 90.f, py + 450.f, 300.f, 44.f);
+    drawButton(window, demosBackBtn, "BACK TO MENU", sf::Color(120, 50, 140));
+    drawLabel(window, "OR PRESS ESC", px + 168.f, py + 510.f, 1.6f, sf::Color(120, 140, 160));
 }
 
-bool Hud::clickedCritterObserverDemo(sf::Vector2f pos) const {
-    return contains(critterObserverDemoBtn, pos);
+std::string Hud::handleDemosClick(sf::Vector2f pos) const {
+    if (contains(demoMapRulesBtn, pos)) return "map_rules";
+    if (contains(demoMapObserverBtn, pos)) return "map_observer";
+    if (contains(demoCritterObserverBtn, pos)) return "critter_observer";
+    if (contains(demoStrategyBtn, pos)) return "tower_strategy";
+    if (contains(demoFactoryBtn, pos)) return "critter_factory";
+    if (contains(demoDecoratorBtn, pos)) return "tower_decorator";
+    if (contains(demosBackBtn, pos)) return "back";
+    return "none";
 }
+
+void Hud::setTargetingName(const std::string& name) { targetingName = name; }
 
 bool Hud::clickedMapEditor(sf::Vector2f pos) const {
     return contains(mapEditorBtn, pos);

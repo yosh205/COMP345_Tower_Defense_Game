@@ -33,7 +33,7 @@
 #include "Critter/CritterObserverDriver.h"
 namespace {
 
-enum class AppState { StartMenu, MapDemo, MapEditor, Playing, GameOver };
+enum class AppState { StartMenu, Demos, MapDemo, MapEditor, Playing, GameOver };
 
 bool isOccupied(const std::vector<std::unique_ptr<Tower>>& towers, int row, int col) {
     for (const auto& t : towers) {
@@ -368,14 +368,8 @@ int main() {
                 if (event.type == sf::Event::MouseButtonPressed &&
                     event.mouseButton.button == sf::Mouse::Left) {
                     // Start-menu fullscreen toggle may change preference only.
-                    if (hud.clickedMapObserverDemo(mouseF)) {
-                        MapObserverDriver driver;
-                        driver.run();  // opens its own window; the menu continues when it is closed
-                        continue;
-                    }
-                    if (hud.clickedCritterObserverDemo(mouseF)) {
-                        CritterObserverDriver driver;
-                        driver.run();  // opens its own window; the menu continues when it is closed
+                    if (hud.clickedDemos(mouseF)) {
+                        state = AppState::Demos;
                         continue;
                     }
                     if (hud.clickedMapEditor(mouseF)) {
@@ -390,12 +384,6 @@ int main() {
                         state = AppState::MapEditor;
                         continue;
                     }
-                    if (hud.clickedMapDemo(mouseF)) {
-                        state = AppState::MapDemo;
-                        exampleIndex = 0;
-                        printMapExamples(mapExamples);
-                        continue;
-                    }
                     const bool wasFs = hud.wantsFullscreen();
                     if (hud.handleStartClick(mouseF)) {
                         beginPlay();
@@ -404,6 +392,43 @@ int main() {
                         fullscreen = hud.wantsFullscreen();
                         applyDisplayMode();
                     }
+                }
+                continue;
+            }
+
+            if (state == AppState::Demos) {
+                // One button per assignment driver. Each driver opens its own
+                // window; the demos screen continues when it is closed.
+                std::string action = "none";
+                if (event.type == sf::Event::MouseButtonPressed &&
+                    event.mouseButton.button == sf::Mouse::Left) {
+                    action = hud.handleDemosClick(mouseF);
+                } else if (event.type == sf::Event::KeyPressed &&
+                           event.key.code == sf::Keyboard::Escape) {
+                    action = "back";
+                }
+
+                if (action == "map_rules") {
+                    state = AppState::MapDemo;
+                    exampleIndex = 0;
+                    printMapExamples(mapExamples);
+                } else if (action == "map_observer") {
+                    MapObserverDriver driver;
+                    driver.run();
+                } else if (action == "critter_observer") {
+                    CritterObserverDriver driver;
+                    driver.run();
+                } else if (action == "tower_strategy") {
+                    // TODO(A3 Part 1): TowerStrategyDriver driver; driver.run();
+                    std::cout << "Tower Strategy demo: not implemented yet.\n";
+                } else if (action == "critter_factory") {
+                    // TODO(A3 Part 2): CritterFactoryDriver driver; driver.run();
+                    std::cout << "Critter Factory demo: not implemented yet.\n";
+                } else if (action == "tower_decorator") {
+                    // TODO(A3 Part 3): TowerDecoratorDriver driver; driver.run();
+                    std::cout << "Tower Decorator demo: not implemented yet.\n";
+                } else if (action == "back") {
+                    state = AppState::StartMenu;
                 }
                 continue;
             }
@@ -426,7 +451,7 @@ int main() {
                 } else if (action == "prev") {
                     exampleIndex = (exampleIndex + count - 1) % count;
                 } else if (action == "back") {
-                    state = AppState::StartMenu;
+                    state = AppState::Demos;
                 }
                 continue;
             }
@@ -543,6 +568,15 @@ int main() {
                         selectedTower = -1;
                         hud.clearShopSelection();
                         layoutMap();
+                    } else if (action == "cycle_strategy" && selectedTower >= 0) {
+                        // TODO(A3 Part 1): give the selected tower the next TargetingStrategy
+                        // (nearest tower -> nearest exit -> strongest -> weakest -> ...).
+                        std::cout << "Targeting strategies: not implemented yet.\n";
+                    } else if ((action == "add_splash" || action == "add_burning" ||
+                                action == "add_freezing") && selectedTower >= 0) {
+                        // TODO(A3 Part 3): if the player can pay, wrap the selected tower:
+                        // towers[selectedTower] = std::make_unique<SplashDecorator>(std::move(towers[selectedTower]));
+                        std::cout << "Tower decorators: not implemented yet.\n";
                     } else if (action == "start_wave") {
                         startWave();
                     } else if (action == "toggle_fullscreen") {
@@ -592,6 +626,8 @@ int main() {
 
         if (state == AppState::StartMenu) {
             hud.drawStartMenu(window);
+        } else if (state == AppState::Demos) {
+            hud.drawDemos(window);
         } else if (state == AppState::MapDemo) {
             // Draw the current example map centred in the area left of the
             // sidebar, with its isValid() result and rule in the sidebar.
@@ -658,6 +694,8 @@ int main() {
             hud.setWaveInfo(waveNumber,
                             waveInProgress ? wave.crittersRemaining() : 0,
                             waveInProgress);
+            // TODO(A3 Part 1): show the selected tower's strategy on its TARGET button, e.g.
+            // if (sel) hud.setTargetingName(sel->getStrategy().getName());
             hud.drawPlayHud(window, sel);
         }
         
