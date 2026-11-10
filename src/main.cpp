@@ -595,8 +595,7 @@ int main() {
                     if (!map.isInBounds(row, col)) {
                         selectedTower = -1;
                         selectedCritterID = -1;
-                    }
-                    else if (hud.getShopSelection() != ShopSelection::None) {
+                    } else if (hud.getShopSelection() != ShopSelection::None) {
                         const int price = Hud::priceOf(hud.getShopSelection());
                         if (map.canPlaceTower(row, col) && !isOccupied(towers, row, col) &&
                             hud.getGold() >= price) {
@@ -608,23 +607,18 @@ int main() {
                                 hud.clearShopSelection();
                             }
                         }
-                    }
-                    else {
-                            const int hit = CritterView::pickCritterId(
-                                wave.getActiveCritters(), mouseF, cellSize, ox, oy);
-                            if (hit >= 0) {                  // a critter was clicked
-                                selectedCritterID = hit;
-                                selectedTower = -1;
-                            }
-                            else {
-                                selectedTower = findTowerAt(towers, row, col);
-                                selectedCritterID = -1;
-                            }
-                        }
-                        /* }
                     } else {
-                        selectedTower = findTowerAt(towers, row, col);
-                    }*/
+                        // A click on a critter inspects it; otherwise it selects the tower there, if any.
+                        const int hit = CritterView::pickCritterId(
+                            wave.getActiveCritters(), mouseF, cellSize, ox, oy);
+                        if (hit >= 0) {
+                            selectedCritterID = hit;
+                            selectedTower = -1;
+                        } else {
+                            selectedTower = findTowerAt(towers, row, col);
+                            selectedCritterID = -1;
+                        }
+                    }
                 }
             } else if (event.type == sf::Event::MouseButtonPressed &&
                        event.mouseButton.button == sf::Mouse::Right) {
@@ -719,7 +713,11 @@ int main() {
             hud.drawPlayHud(window, sel);
             if (const Critter* inspected = CritterView::findById(wave.getActiveCritters(), selectedCritterID)) {
                 const float panelH = 170.f;
-                CritterView::drawCharacteristics(window, *inspected,window.getSize().x - Hud::kSidebarWidth + 14.f,window.getSize().y - panelH - 14.f, 
+                // The clicked critter's characteristics, at the bottom of the sidebar.
+                CritterView::drawCharacteristics(
+                    window, *inspected,
+                    static_cast<float>(window.getSize().x) - Hud::kSidebarWidth + 14.f,
+                    static_cast<float>(window.getSize().y) - panelH - 14.f,
                     Hud::kSidebarWidth - 28.f, panelH);
             }
         }

@@ -28,6 +28,7 @@ public:
 	 * @param cellSize Size of one map cell, in pixels.
 	 * @param originX  Left edge of the map, in pixels.
 	 * @param originY  Top edge of the map, in pixels.
+	 * @param selectedId Id of the critter being inspected (drawn with a ring), or -1 for none.
 	 */
 	void draw(sf::RenderWindow& window,
 		const std::vector<Critter>& critters,
@@ -63,11 +64,19 @@ public:
 	 * @return The living critter with that id, or nullptr if it died, escaped or never existed.
 	 */
 	static const Critter* findById(const std::vector<Critter>& critters, int id);
-	/* This method draws the characteristics of a critter (renders them either above critter or sidebar)
-	*/
 
-	static void drawCharacteristics(sf::RenderWindow& window, const Critter& critter, float originX, float originY, float width, float height);
-
+	/**
+	 * @brief Draws a panel with a critter's characteristics: kind, level, hit points,
+	 * speed (and whether it is slowed), strength, reward and coins stolen at the exit.
+	 * @param window   The window to draw into.
+	 * @param critter  The critter to describe.
+	 * @param originX  Left edge of the panel, in pixels.
+	 * @param originY  Top edge of the panel, in pixels.
+	 * @param width    Panel width, in pixels.
+	 * @param height   Panel height, in pixels.
+	 */
+	static void drawCharacteristics(sf::RenderWindow& window, const Critter& critter,
+		float originX, float originY, float width, float height);
 
 private:
 	/**
@@ -77,6 +86,7 @@ private:
 	 * @param cellSize Size of one map cell, in pixels.
 	 * @param originX  Left edge of the map, in pixels.
 	 * @param originY  Top edge of the map, in pixels.
+	 * @param selected True to draw a white selection ring around the critter.
 	 */
 	void drawOne(sf::RenderWindow& window, const Critter& critter,
 				float cellSize, float originX, float originY, bool selected) const;
@@ -85,9 +95,6 @@ private:
 	 * @return The fill colour used for a critter kind.
 	 */
 	sf::Color getColorForKind(CritterKind kind) const;
-
-	/* This method draws the characteristics of a critter (renders them either above critter or sidebar)
-	*/
 };
 
 #endif // CritterView_h
