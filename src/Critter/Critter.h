@@ -142,6 +142,11 @@ public:
      */
     int getCoinsStolen() const;
 
+    /*
+    * Returns the Critter's ID
+    */
+    int getId() const; 
+
 private:
     CritterKind kind;     ///< Normal, Armored or Fast.
     int maxHitPoints;     ///< Starting hit points.
@@ -156,6 +161,8 @@ private:
     int level;     ///< Difficulty level, 1 or higher.
     int reward;    ///< Coins earned when killed (set from level and kind).
     int strength;  ///< Sets the coins stolen at the exit (set from level and kind).
+    int id; // a Critter's id
+    static int nextID; // all Critter IDs will follow each other incrementally and be unique
 };
 
 #endif // Critter_h
