@@ -81,7 +81,7 @@ few minutes; after a code change only `cmake --build build -j` is needed.
 
 `tests/tests.cpp` checks the game rules of the map, towers, critters and waves,
 including the tower, map and critter observers
-(204 checks). It is a separate program and does not need SFML or a screen.
+(218 checks). It is a separate program and does not need SFML or a screen.
 
 ```bash
 # With CMake (after building as above)
@@ -131,8 +131,10 @@ Everything is in-game menus (no console prompts):
    **Critter Observer** opens a window with a `CritterObserver`: **A** add a critter,
    **R** remove one, **D** damage the first, **M** move them along the path, **Esc** go back.
    Each change redraws the window and prints the critter view in the console.
-   **Tower Strategy**, **Critter Factory** and **Tower Decorator** are the Assignment 3 drivers
-   (in progress).
+   **Critter Factory** shows the waves `CritterFactory` creates: for wave *n*, how many critters
+   of each kind, their hit points, speed, reward and coins stolen, the total hit points, and
+   every critter in the order it enters; **Left** / **Right** change the wave, **Esc** go back.
+   **Tower Strategy** and **Tower Decorator** are the other Assignment 3 drivers (in progress).
 2. **Shop** (right panel) — click Direct / Area / Slow, then click a green scenery cell to place
 3. **Select tower** — click it on the map to see its range, power and rate of fire, **Upgrade** / **Sell**.
    **Target** changes which critter it shoots, and **Splash** / **Burn** / **Freeze** add special
@@ -192,10 +194,15 @@ COMP 345 project and Assignment 1 specifications [3][5]; the numbers are the val
 ### Critters and waves
 - Every critter has **hit points**, **speed**, **level**, **reward** and **strength**,
   and is one of three kinds: Normal, Armored (more hit points, slower) or Fast (fewer hit points, faster).
-- The **critter group generator** is called when the player clicks **Start Wave**.
-  Each wave has 10 Normal, 5 Armored and 5 Fast critters; their level equals the
-  wave number, and their hit points (+10% per wave) and speed (+0.1 cells/s per wave)
-  grow with it, so **every wave is harder than the one before**.
+- The **critter group generator** is called when the player clicks **Start Wave**, and
+  the **critter factory** creates the wave from its number (wave *n* comes after *n − 1*
+  waves were destroyed), so **every wave is harder than the one before**:
+  - more critters, and tougher kinds join: wave 1 has 9 Normal critters; Fast critters join
+    from wave 2 and Armored critters from wave 3 (Normal: 8 + *n*, at most 20; Fast: 2(*n* − 1),
+    at most 12; Armored: 2(*n* − 2), at most 12);
+  - hit points grow by 10% per wave and speed by 0.1 cells/s per wave;
+  - a critter's level is the wave number, so its reward and the coins it steals grow too.
+  Fast critters enter first, then Normal, then Armored, so nobody waits behind a slower critter.
 - Critters enter one after another at the entry, one per second, and follow the
   shortest path to the exit (`Map::findPath()`). They never move backwards.
   A critter that catches up with the one in front waits a full cell behind it, and the
@@ -226,7 +233,7 @@ without a window (see `tests/tests.cpp`).
 | `src/Map` | `Map`, `generateRandomMap()`, `makeMapExamples()`, `makePlayableMaps()`, `makeMapFromRows()`, `MapEditor` | Grid of cells, setters, tower placement, validity check, entry-to-exit path (breadth-first search); example valid/invalid maps for the demo; the hand-built maps the player can choose, written as rows of text (`E` entry, `X` exit, `.` path, `#` scenery); the editing rules of the map editor (one entry and one exit, what is missing, unused path cells). `Map` is an Observable |
 | `src/Tower` | `Tower` (abstract), `DirectDamageTower`, `AreaDamageTower`, `SlowingTower`, `TowerObserver`, `TowerObserverDriver` | Costs, levels, upgrade/sell, detect → select → shoot. Subclasses only change the shot's effect (`fireAt()`). `Tower` is an Observable; `TowerObserverDriver` plugs in a `TowerObserver` and upgrades the tower so the view is printed again after each change |
 | `src/Observer` | `Observable`, `Observer` | Subject/observer base. `attach` / `detach` / `notify` |
-| `src/Critter` | `Critter`, `CritterGroupGenerator`, `CritterObserver`, `CritterObserverDriver` | Critter stats and effects; creating a wave, spawning, moving along the path, rewards and theft. `Critter` is an Observable; `CritterObserver` prints and redraws the watched critters on every change; `CritterObserverDriver` is the Critter Observer Demo |
+| `src/Critter` | `Critter`, `CritterFactory`, `CritterGroupGenerator`, `CritterObserver`, `CritterObserverDriver` | Critter stats and effects; `CritterFactory` (Factory pattern) creates each critter and each wave from the wave number; the generator spawns the wave and moves it along the path, with rewards and theft. `Critter` is an Observable; `CritterObserver` prints and redraws the watched critters on every change; `CritterObserverDriver` is the Critter Observer Demo |
 | `src/GUI` | `MapView`, `TowerView`, `CritterView`, `Hud`, `MapObserver`, `MapObserverDriver` | Drawing with SFML and the menus/sidebar. Views only read the game objects. `MapObserver` redraws the map in a window on every change; `MapObserverDriver` is the Map Observer demo |
 | `src/main.cpp` | — | Driver: runs the tower observer driver in the console, then the start menu, then each frame spawn → move → pay coins and hearts → towers shoot → draw. At 0 hearts, the game over screen |
 

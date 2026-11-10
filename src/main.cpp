@@ -13,6 +13,7 @@
 #include <vector>
 #include <iostream>
 
+#include "GUI/CritterFactoryDriver.h"
 #include "GUI/Hud.h"
 #include "GUI/MapObserverDriver.h"
 #include "GUI/MapView.h"
@@ -423,8 +424,8 @@ int main() {
                     // TODO(A3 Part 1): TowerStrategyDriver driver; driver.run();
                     std::cout << "Tower Strategy demo: not implemented yet.\n";
                 } else if (action == "critter_factory") {
-                    // TODO(A3 Part 2): CritterFactoryDriver driver; driver.run();
-                    std::cout << "Critter Factory demo: not implemented yet.\n";
+                    CritterFactoryDriver driver;
+                    driver.run();
                 } else if (action == "tower_decorator") {
                     // TODO(A3 Part 3): TowerDecoratorDriver driver; driver.run();
                     std::cout << "Tower Decorator demo: not implemented yet.\n";

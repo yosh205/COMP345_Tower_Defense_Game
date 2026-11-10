@@ -42,25 +42,12 @@ void placeAlong(Critter& critter, const std::vector<Position>& path, float progr
 
 } // namespace
 
-CritterGroupGenerator::CritterGroupGenerator(int waveNb) { // for now, hardcoded to always generate 20 critters. Can be refined to have a percentage-based implementation
-	// Every critter's level is the wave number, so its reward and strength
-	// (calculated by Critter from the level) grow with each wave.
-	//Normal Critters
-	for (int i = 0; i < 10; i++) {
-		Critter newCritter = CritterFactory::createCritter(CritterKind::Normal, waveNb);
-		addCritterToGroup(newCritter);
+CritterGroupGenerator::CritterGroupGenerator(int waveNb) {
+	// The factory decides the wave: how many critters of each kind, their stats
+	// (which grow with the wave number) and the order they enter the map.
+	for (const Critter& critter : CritterFactory::createWave(waveNb)) {
+		addCritterToGroup(critter);
 	}
-	//Armored Critters
-	for (int i = 0; i < 5; i++) {
-		Critter newCritter = CritterFactory::createCritter(CritterKind::Armored, waveNb);
-		addCritterToGroup(newCritter);
-	}
-	//Fast Critters
-	for (int i = 0; i < 5; i++) {
-		Critter newCritter = CritterFactory::createCritter(CritterKind::Fast, waveNb);
-		addCritterToGroup(newCritter);
-	}
-	//create a group of critters, how do we determine the amount/kind of critters?
 }
 
 void CritterGroupGenerator::setAllowOverlap(bool allow) {
