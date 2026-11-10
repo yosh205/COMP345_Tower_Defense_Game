@@ -142,10 +142,12 @@ public:
      */
     int getCoinsStolen() const;
 
-    /*
-    * Returns the Critter's ID
-    */
-    int getId() const; 
+    /**
+     * @return This critter's id, unique among all critters created so far.
+     * Copies of a critter keep its id, so the game can find the same critter
+     * again after the wave's vector moves critters around.
+     */
+    int getId() const;
 
 private:
     CritterKind kind;     ///< Normal, Armored or Fast.
@@ -161,8 +163,8 @@ private:
     int level;     ///< Difficulty level, 1 or higher.
     int reward;    ///< Coins earned when killed (set from level and kind).
     int strength;  ///< Sets the coins stolen at the exit (set from level and kind).
-    int id; // a Critter's id
-    static int nextID; // all Critter IDs will follow each other incrementally and be unique
+    int id;             ///< Unique id, given by the constructor.
+    static int nextID;  ///< Id for the next critter created: 0, 1, 2, ...
 };
 
 #endif // Critter_h

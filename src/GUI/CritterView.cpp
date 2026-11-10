@@ -7,10 +7,19 @@
  */
 #include "CritterView.h"
 #include <algorithm>
+#include <cmath>
+#include <string>
+
 #include "SimpleText.h"
 
 namespace {
-	
+
+/** @return value with one decimal, e.g. "1.2". */
+std::string oneDecimal(float value) {
+    const int tenths = static_cast<int>(std::lround(value * 10.f));
+    return std::to_string(tenths / 10) + "." + std::to_string(tenths % 10);
+}
+
 sf::Vector2f cellCenter(const Critter& c, float cellSize, float ox, float oy) {
 	return { ox + c.getCol() * cellSize + cellSize * 0.5f,
             oy + c.getRow() * cellSize + cellSize * 0.5f };
@@ -199,6 +208,8 @@ void CritterView::drawCharacteristics(sf::RenderWindow& window, const Critter& c
         std::string("CRITTER: ") + kindName,
         "LEVEL: " + std::to_string(critter.getLevel()),
         "HP: " + std::to_string(critter.getHitPoints()) + "/" + std::to_string(critter.getMaxHitPoints()),
+        "SPEED: " + oneDecimal(critter.getSpeed()) +
+            (critter.getSpeed() < critter.getBaseSpeed() ? " (SLOWED)" : ""),
         "STRENGTH: " + std::to_string(critter.getStrength()),
         "REWARD: $" + std::to_string(critter.getReward()),
         "STEALS $" + std::to_string(critter.getCoinsStolen()) + " AT EXIT",
@@ -208,12 +219,8 @@ void CritterView::drawCharacteristics(sf::RenderWindow& window, const Critter& c
     const float lineStep = 7.f * scale + 6.f; // glyph height + gap
     const float padding = 12.f;
     float y = originY + padding;
-    for (std::size_t i = 0; i < lines.size(); ++i) {
-        // First line (the title) uses the critter's own colour.
-        /*CritterKind ck = critter.getKind();
-        const sf::Color color = (i == 0) ? getColorForKind(ck)
-            : sf::Color(200, 212, 225);*/
-        SimpleText::draw(window, lines[i], originX + padding, y, scale, sf::Color::White);
+    for (const std::string& line : lines) {
+        SimpleText::draw(window, line, originX + padding, y, scale, sf::Color::White);
         y += lineStep;
     }
 }

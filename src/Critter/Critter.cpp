@@ -6,7 +6,8 @@
 #include <algorithm>
 #include <cmath>
 
-int Critter::nextID = 0; // defines the static ID counter
+int Critter::nextID = 0;
+
 Critter::Critter(CritterKind kind, int maxHitPoints, float baseSpeed, int row, int col,
                  int level)
     : kind(kind),
@@ -20,8 +21,8 @@ Critter::Critter(CritterKind kind, int maxHitPoints, float baseSpeed, int row, i
       pathIndex(0),
       level(std::max(1, level)),
       reward(0),
-      strength(0),id(nextID++)
-    {
+      strength(0),
+      id(nextID++) {
     // Reward is proportional to level; armored critters are worth 50% more.
     reward = 5 * this->level;
     if (kind == CritterKind::Armored) {
