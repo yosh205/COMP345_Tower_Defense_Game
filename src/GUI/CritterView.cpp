@@ -7,6 +7,7 @@
  */
 #include "CritterView.h"
 #include <algorithm>
+#include <cmath>
 #include "SimpleText.h"
 
 namespace {
