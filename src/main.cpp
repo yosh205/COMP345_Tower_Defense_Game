@@ -16,6 +16,7 @@
 #include "GUI/CritterFactoryDriver.h"
 #include "GUI/Hud.h"
 #include "GUI/MapObserverDriver.h"
+#include "GUI/TowerStrategyDriver.h"
 #include "GUI/MapView.h"
 #include "GUI/TowerView.h"
 #include "GUI/CritterView.h"
@@ -423,13 +424,13 @@ int main() {
                     CritterObserverDriver driver;
                     driver.run();
                 } else if (action == "tower_strategy") {
-                    // TODO(A3 Part 1): TowerStrategyDriver driver; driver.run();
-                    std::cout << "Tower Strategy demo: not implemented yet.\n";
+                    TowerStrategyDriver driver;
+                    driver.run();
                 } else if (action == "critter_factory") {
                     CritterFactoryDriver driver;
                     driver.run();
                 } else if (action == "tower_decorator") {
-                    // TODO(A3 Part 3): TowerDecoratorDriver driver; driver.run();
+                    // TODO(A3 Part 3): TowerDecoratorDriver — owned by branch a3-vm-decorator.
                     std::cout << "Tower Decorator demo: not implemented yet.\n";
                 } else if (action == "back") {
                     state = AppState::StartMenu;
@@ -574,13 +575,10 @@ int main() {
                         hud.clearShopSelection();
                         layoutMap();
                     } else if (action == "cycle_strategy" && selectedTower >= 0) {
-                        // TODO(A3 Part 1): give the selected tower the next TargetingStrategy
-                        // (nearest tower -> nearest exit -> strongest -> weakest -> ...).
-                        std::cout << "Targeting strategies: not implemented yet.\n";
+                        towers[static_cast<std::size_t>(selectedTower)]->cycleStrategies();
                     } else if ((action == "add_splash" || action == "add_burning" ||
                                 action == "add_freezing") && selectedTower >= 0) {
-                        // TODO(A3 Part 3): if the player can pay, wrap the selected tower:
-                        // towers[selectedTower] = std::make_unique<SplashDecorator>(std::move(towers[selectedTower]));
+                        // TODO(A3 Part 3): Splash/Burn/Freeze — owned by branch a3-vm-decorator.
                         std::cout << "Tower decorators: not implemented yet.\n";
                     } else if (action == "start_wave") {
                         startWave();
@@ -711,8 +709,9 @@ int main() {
             hud.setWaveInfo(waveNumber,
                             waveInProgress ? wave.crittersRemaining() : 0,
                             waveInProgress);
-            // TODO(A3 Part 1): show the selected tower's strategy on its TARGET button, e.g.
-            // if (sel) hud.setTargetingName(sel->getStrategy().getName());
+            if (sel != nullptr) {
+                hud.setTargetingName(sel->getStrategy());
+            }
             hud.drawPlayHud(window, sel);
             if (const Critter* inspected = CritterView::findById(wave.getActiveCritters(), selectedCritterID)) {
                 const float panelH = 170.f;

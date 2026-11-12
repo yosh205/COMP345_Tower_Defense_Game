@@ -100,6 +100,13 @@ public:
     std::vector<Critter*> detectTargets(const std::vector<Critter*>& critters) const;
 
     /**
+     * @brief Asks the current TargetingStrategy which critter would be shot, without firing.
+     * @param critters Living and dead critters; dead ones are skipped.
+     * @return The chosen critter, or nullptr if none are in range.
+     */
+    Critter* peekTarget(const std::vector<Critter*>& critters) const;
+
+    /**
      * @return Direction the tower is facing, in degrees: 0 = right (+col),
      *         90 = down (+row), clockwise as in SFML. Follows the current target.
      */

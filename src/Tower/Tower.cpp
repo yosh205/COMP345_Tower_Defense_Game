@@ -67,6 +67,25 @@ void Tower::setStrategy(std::unique_ptr<TargetingStrategy> newStrategy) {
     notify();
 }
 
+void Tower::cycleStrategies() {
+    // Cycle from whatever strategy is currently set (works after setStrategy too).
+    const std::string name = targetingStrategy ? targetingStrategy->getName() : "";
+    if (name == "NEAREST TO EXIT") {
+        strategyID = 1;
+        targetingStrategy = std::make_unique<NearestToTowerStrategy>();
+    } else if (name == "NEAREST TO TOWER") {
+        strategyID = 2;
+        targetingStrategy = std::make_unique<StrongestStrategy>();
+    } else if (name == "STRONGEST") {
+        strategyID = 3;
+        targetingStrategy = std::make_unique<WeakestStrategy>();
+    } else {
+        strategyID = 0;
+        targetingStrategy = std::make_unique<NearestToExitStrategy>();
+    }
+    notify();
+}
+
 bool Tower::canUpgrade() const { return level < maxLevel; }
 
 bool Tower::upgrade() {
@@ -100,17 +119,11 @@ std::vector<Critter*> Tower::detectTargets(const std::vector<Critter*>& critters
 }
 
 Critter* Tower::selectTarget(const std::vector<Critter*>& inRange) const {
-  /*  Critter* best = nullptr;
-    for (Critter* c : inRange) {
-        if (c == nullptr || !c->isAlive()) {
-            continue;
-        }
-        if (best == nullptr || c->getPathIndex() > best->getPathIndex()) {
-            best = c;
-        }
-    }
-    return best;*/
-    return targetingStrategy->choose(*this,inRange);
+    return targetingStrategy->choose(*this, inRange);
+}
+
+Critter* Tower::peekTarget(const std::vector<Critter*>& critters) const {
+    return selectTarget(detectTargets(critters));
 }
 
 void Tower::update(float dt, std::vector<Critter*>& critters) {
