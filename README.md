@@ -80,8 +80,9 @@ few minutes; after a code change only `cmake --build build -j` is needed.
 ### Running the tests
 
 `tests/tests.cpp` checks the game rules of the map, towers, critters and waves,
-including the tower, map and critter observers
-(218 checks). It is a separate program and does not need SFML or a screen.
+including the tower, map and critter observers (Assignment 2), the critter factory,
+the targeting strategies and the tower decorators (Assignment 3)
+(271 checks). It is a separate program and does not need SFML or a screen.
 
 ```bash
 # With CMake (after building as above)
