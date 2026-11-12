@@ -16,6 +16,7 @@
 #include "GUI/CritterFactoryDriver.h"
 #include "GUI/Hud.h"
 #include "GUI/MapObserverDriver.h"
+#include "GUI/TowerDecoratorDriver.h"
 #include "GUI/TowerStrategyDriver.h"
 #include "GUI/MapView.h"
 #include "GUI/TowerView.h"
@@ -31,6 +32,7 @@
 #include "Tower/Tower.h"
 #include "Tower/TowerObserverDriver.h"
 #include "Tower/TargetingStrategy.h"
+#include "Tower/TowerDecorator.h"
 #include "Critter/Critter.h"
 #include "Critter/CritterGroupGenerator.h"
 #include "Critter/CritterObserverDriver.h"
@@ -430,8 +432,8 @@ int main() {
                     CritterFactoryDriver driver;
                     driver.run();
                 } else if (action == "tower_decorator") {
-                    // TODO(A3 Part 3): TowerDecoratorDriver — owned by branch a3-vm-decorator.
-                    std::cout << "Tower Decorator demo: not implemented yet.\n";
+                    TowerDecoratorDriver driver;
+                    driver.run();
                 } else if (action == "back") {
                     state = AppState::StartMenu;
                 }
@@ -554,11 +556,12 @@ int main() {
                     const std::string action = hud.handlePlayClick(mouseF, sel);
 
                     if (action == "upgrade" && selectedTower >= 0) {
-                        Tower& t = *towers[static_cast<std::size_t>(selectedTower)];
-                        const int cost = t.getUpgradeCost();
-                        if (t.canUpgrade() && hud.getGold() >= cost) {
+                        auto& slot = towers[static_cast<std::size_t>(selectedTower)];
+                        const int cost = slot->getUpgradeCost();
+                        if (slot->canUpgrade() && hud.getGold() >= cost) {
                             hud.setGold(hud.getGold() - cost);
-                            t.upgrade();
+                            // Decorator pattern: wrap in LevelUpDecorator instead of Tower::upgrade().
+                            slot = std::make_unique<LevelUpDecorator>(std::move(slot));
                         }
                     } else if (action == "sell" && selectedTower >= 0) {
                         Tower& t = *towers[static_cast<std::size_t>(selectedTower)];
@@ -578,8 +581,26 @@ int main() {
                         towers[static_cast<std::size_t>(selectedTower)]->cycleStrategies();
                     } else if ((action == "add_splash" || action == "add_burning" ||
                                 action == "add_freezing") && selectedTower >= 0) {
-                        // TODO(A3 Part 3): Splash/Burn/Freeze — owned by branch a3-vm-decorator.
-                        std::cout << "Tower decorators: not implemented yet.\n";
+                        auto& slot = towers[static_cast<std::size_t>(selectedTower)];
+                        const int splashCost = 80;
+                        const int burnCost = 100;
+                        const int freezeCost = 90;
+                        if (action == "add_splash" && !slot->hasEffect("SPLASH") &&
+                            hud.getGold() >= splashCost) {
+                            hud.setGold(hud.getGold() - splashCost);
+                            slot = std::make_unique<SplashDecorator>(std::move(slot));
+                            slot->addInvestment(splashCost);
+                        } else if (action == "add_burning" && !slot->hasEffect("BURN") &&
+                                   hud.getGold() >= burnCost) {
+                            hud.setGold(hud.getGold() - burnCost);
+                            slot = std::make_unique<BurningDecorator>(std::move(slot));
+                            slot->addInvestment(burnCost);
+                        } else if (action == "add_freezing" && !slot->hasEffect("FREEZE") &&
+                                   hud.getGold() >= freezeCost) {
+                            hud.setGold(hud.getGold() - freezeCost);
+                            slot = std::make_unique<FreezingDecorator>(std::move(slot));
+                            slot->addInvestment(freezeCost);
+                        }
                     } else if (action == "start_wave") {
                         startWave();
                     } else if (action == "toggle_fullscreen") {

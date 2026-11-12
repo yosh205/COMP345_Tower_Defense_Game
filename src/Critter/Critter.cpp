@@ -89,17 +89,51 @@ void Critter::applySlow(float factor, float durationSeconds) {
     notify();
 }
 
-void Critter::updateEffects(float dt) {
-    if (slowTimeLeft <= 0.f) {
-        slowFactor = 1.f;
+void Critter::applyBurn(float damagePerSecond, float durationSeconds) {
+    if (damagePerSecond <= 0.f || durationSeconds <= 0.f) {
         return;
     }
-    slowTimeLeft -= dt;
-    if (slowTimeLeft <= 0.f) {
-        slowTimeLeft = 0.f;
+    // Keep the stronger burn; always refresh duration when reapplied.
+    if (damagePerSecond > burnDps) {
+        burnDps = damagePerSecond;
+    }
+    burnTimeLeft = durationSeconds;
+    notify();
+}
+
+void Critter::updateEffects(float dt) {
+    bool changed = false;
+
+    if (slowTimeLeft > 0.f) {
+        slowTimeLeft -= dt;
+        if (slowTimeLeft <= 0.f) {
+            slowTimeLeft = 0.f;
+            slowFactor = 1.f;
+        }
+        changed = true;
+    } else {
         slowFactor = 1.f;
     }
-    notify();
+
+    if (burnTimeLeft > 0.f && burnDps > 0.f) {
+        burnTimeLeft -= dt;
+        burnCarry += burnDps * dt;
+        const int ticks = static_cast<int>(burnCarry);
+        if (ticks > 0) {
+            burnCarry -= static_cast<float>(ticks);
+            takeDamage(ticks);
+        }
+        if (burnTimeLeft <= 0.f) {
+            burnTimeLeft = 0.f;
+            burnDps = 0.f;
+            burnCarry = 0.f;
+        }
+        changed = true;
+    }
+
+    if (changed) {
+        notify();
+    }
 }
 
 float Critter::distanceTo(int row, int col) const {

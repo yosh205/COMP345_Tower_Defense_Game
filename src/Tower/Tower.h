@@ -44,60 +44,60 @@ public:
     virtual std::string getTypeName() const = 0;
 
     /** @return Row of the map cell the tower stands on. */
-    int getRow() const;
+    virtual int getRow() const;
     /** @return Column of the map cell the tower stands on. */
-    int getCol() const;
+    virtual int getCol() const;
     /** @return Current level, from 1 to getMaxLevel(). */
-    int getLevel() const;
+    virtual int getLevel() const;
     /** @return Highest level this tower can be upgraded to. */
-    int getMaxLevel() const;
+    virtual int getMaxLevel() const;
 
     /** @return Cost paid to buy this tower at level 1. */
-    int getBuyCost() const;
+    virtual int getBuyCost() const;
 
     /** @return Cost to upgrade from the current level to the next, or 0 if max. */
-    int getUpgradeCost() const;
+    virtual int getUpgradeCost() const;
 
     /** @return Sell refund for the current level (portion of money spent). */
-    int getRefundValue() const;
+    virtual int getRefundValue() const;
 
     /** @return Range at the current level, in map cells (distance from the tower's cell). */
-    float getRange() const;
+    virtual float getRange() const;
     /** @return Damage (or effect strength) of one shot at the current level. */
-    int getPower() const;
+    virtual int getPower() const;
 
     /** @return Shots per second at the current level. */
-    float getFireRate() const;
+    virtual float getFireRate() const;
 
-    /*@return Current Targeting strategy's name*/
-    std::string getStrategy() const;
+    /** @return Current targeting strategy's name for the sidebar. */
+    virtual std::string getStrategy() const;
 
-    /**/
-    void setStrategy(std::unique_ptr<TargetingStrategy> newStrategy);
-
+    /** @brief Replaces the tower's targeting strategy. */
+    virtual void setStrategy(std::unique_ptr<TargetingStrategy> newStrategy);
 
     /** @return True if the tower is below its maximum level. */
-    bool canUpgrade() const;
+    virtual bool canUpgrade() const;
 
     /**
      * @brief Pays upgradeCost (caller handles gold) and raises level by one.
      * @return true if upgraded, false if already at max level.
      */
-    bool upgrade();
+    virtual bool upgrade();
 
     /**
      * @brief Each frame: tick cooldown, then detect / select / shoot.
+     * Uses virtual getters and fireAt() so decorators on the outside take effect.
      * @param dt       Seconds since last frame.
      * @param critters Living and dead critters; dead ones are skipped.
      */
-    void update(float dt, std::vector<Critter*>& critters);
+    virtual void update(float dt, std::vector<Critter*>& critters);
 
     /**
      * @brief Finds the critters this tower can currently shoot.
      * @param critters All critters on the map (null or dead ones are skipped).
      * @return Critters currently within range (alive only).
      */
-    std::vector<Critter*> detectTargets(const std::vector<Critter*>& critters) const;
+    virtual std::vector<Critter*> detectTargets(const std::vector<Critter*>& critters) const;
 
     /**
      * @brief Asks the current TargetingStrategy which critter would be shot, without firing.
@@ -121,8 +121,38 @@ public:
     /** @return Column of the target at the moment of the last shot. */
     float getLastTargetCol() const;
 
-    /*Cycle through the different targeting strategies. Sets the targeting strategy*/
-    void cycleStrategies();
+    /** @brief Cycles nearest-exit → nearest-tower → strongest → weakest. */
+    virtual void cycleStrategies();
+
+    /**
+     * @brief Picks which detected critter to shoot (Strategy pattern).
+     * @param inRange Critters returned by detectTargets().
+     * @return The critter to shoot, or nullptr if there is none.
+     */
+    virtual Critter* selectTarget(const std::vector<Critter*>& inRange) const;
+
+    /**
+     * @brief Apply this tower's shot effect to the chosen target.
+     * Public so decorators can call the wrapped tower's fireAt().
+     * @param target     Selected critter (guaranteed alive and in range).
+     * @param allCritters Full list (area towers may hit neighbours too).
+     */
+    virtual void fireAt(Critter& target, std::vector<Critter*>& allCritters) = 0;
+
+    /**
+     * @return True if this tower (or a decorator around it) has the given effect tag
+     *         ("SPLASH", "BURN", "FREEZE").
+     */
+    virtual bool hasEffect(const std::string& tag) const;
+
+    /** @return Space-separated decorator tags for the sidebar, or empty. */
+    virtual std::string getEffectTags() const;
+
+    /**
+     * @brief Adds gold spent on special effects to the refund basis.
+     * @param gold Amount paid for a decorator (or other investment).
+     */
+    virtual void addInvestment(int gold);
 
 protected:
     /**
@@ -137,21 +167,6 @@ protected:
      */
     Tower(int row, int col, int buyCost, float baseRange, int basePower,
           float baseFireRate, int maxLevel);
-
-    /**
-     * @brief Picks which detected critter to shoot.
-     * Default: furthest along the path ("first" / closest to exit).
-     * @param inRange Critters returned by detectTargets().
-     * @return The critter to shoot, or nullptr if there is none.
-     */
-    virtual Critter* selectTarget(const std::vector<Critter*>& inRange) const;
-
-    /**
-     * @brief Apply this tower's shot effect to the chosen target.
-     * @param target     Selected critter (guaranteed alive and in range).
-     * @param allCritters Full list (area towers may hit neighbours too).
-     */
-    virtual void fireAt(Critter& target, std::vector<Critter*>& allCritters) = 0;
 
     /** @brief Recalculates range, power and fire rate from level. */
     void refreshStats();

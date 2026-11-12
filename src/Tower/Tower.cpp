@@ -110,9 +110,12 @@ void Tower::refreshStats() {
 
 std::vector<Critter*> Tower::detectTargets(const std::vector<Critter*>& critters) const {
     std::vector<Critter*> inRange;
-    for (Critter* c : critters) {
-        if (c != nullptr && c->isAlive() && c->distanceTo(row, col) <= range) {
-            inRange.push_back(c);
+    const float reach = getRange();
+    const int r = getRow();
+    const int c = getCol();
+    for (Critter* critter : critters) {
+        if (critter != nullptr && critter->isAlive() && critter->distanceTo(r, c) <= reach) {
+            inRange.push_back(critter);
         }
     }
     return inRange;
@@ -126,25 +129,37 @@ Critter* Tower::peekTarget(const std::vector<Critter*>& critters) const {
     return selectTarget(detectTargets(critters));
 }
 
+bool Tower::hasEffect(const std::string& /*tag*/) const { return false; }
+
+std::string Tower::getEffectTags() const { return ""; }
+
+void Tower::addInvestment(int gold) {
+    if (gold > 0) {
+        totalSpent += gold;
+        notify();
+    }
+}
+
 void Tower::update(float dt, std::vector<Critter*>& critters) {
     justFired = false; // only true on the frame the towers actually shoot
     if (cooldown > 0.f) {
         cooldown -= dt;
     }
-    
+
     // Detect and select every frame (not only when ready to fire) so the
     // tower keeps turning to follow its target while it reloads.
+    // Virtual getters / fireAt() let an outer decorator change range and shots.
     const std::vector<Critter*> inRange = detectTargets(critters);
 
-    Critter* target = selectTarget(inRange); // THIS IS WHERE YOU CALL CHOOSE() 
-    if (target == nullptr) { // if there is no target, stop
+    Critter* target = selectTarget(inRange);
+    if (target == nullptr) {
         return;
     }
 
     // Face the target. Screen y grows downward (+row), so atan2(row, col)
     // gives SFML's clockwise angle with 0 degrees pointing right.
-    const float dRow = target->getRow() - static_cast<float>(row);
-    const float dCol = target->getCol() - static_cast<float>(col);
+    const float dRow = target->getRow() - static_cast<float>(getRow());
+    const float dCol = target->getCol() - static_cast<float>(getCol());
     facingDegrees = std::atan2(dRow, dCol) * 180.f / 3.14159265f;
 
     if (cooldown > 0.f) {
@@ -156,5 +171,6 @@ void Tower::update(float dt, std::vector<Critter*>& critters) {
     lastTargetCol = target->getCol();
     fireAt(*target, critters);
     justFired = true;
-    cooldown = (fireRate > 0.f) ? (1.f / fireRate) : 1.f;
+    const float rate = getFireRate();
+    cooldown = (rate > 0.f) ? (1.f / rate) : 1.f;
 }

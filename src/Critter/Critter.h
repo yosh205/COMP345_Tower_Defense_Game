@@ -107,7 +107,15 @@ public:
     void applySlow(float factor, float durationSeconds);
 
     /**
-     * @brief Advances slow timers. Call once per frame with frame dt.
+     * @brief Starts (or refreshes) a burn that deals damagePerSecond for durationSeconds.
+     * Used by BurningDecorator towers.
+     * @param damagePerSecond Hit points removed each second while burning.
+     * @param durationSeconds How long the burn lasts.
+     */
+    void applyBurn(float damagePerSecond, float durationSeconds);
+
+    /**
+     * @brief Advances slow and burn timers. Call once per frame with frame dt.
      * @param dt Seconds since the last frame.
      */
     void updateEffects(float dt);
@@ -156,6 +164,9 @@ private:
     float baseSpeed;      ///< Cells per second when not slowed.
     float slowFactor;     ///< 1 = normal; < 1 = slowed.
     float slowTimeLeft;   ///< Seconds remaining on the current slow.
+    float burnDps = 0.f;      ///< Burn damage per second while burnTimeLeft > 0.
+    float burnTimeLeft = 0.f; ///< Seconds remaining on the current burn.
+    float burnCarry = 0.f;    ///< Fractional burn damage waiting to be applied.
     float row;            ///< Current row (fractional between cells).
     float col;            ///< Current column (fractional between cells).
     int pathIndex;        ///< Index of the path cell the critter is on (0 = entry).
