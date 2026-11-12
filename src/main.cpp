@@ -13,8 +13,11 @@
 #include <vector>
 #include <iostream>
 
+#include "GUI/CritterFactoryDriver.h"
 #include "GUI/Hud.h"
 #include "GUI/MapObserverDriver.h"
+#include "GUI/TowerDecoratorDriver.h"
+#include "GUI/TowerStrategyDriver.h"
 #include "GUI/MapView.h"
 #include "GUI/TowerView.h"
 #include "GUI/CritterView.h"
@@ -28,9 +31,12 @@
 #include "Tower/SlowingTower.h"
 #include "Tower/Tower.h"
 #include "Tower/TowerObserverDriver.h"
+#include "Tower/TargetingStrategy.h"
+#include "Tower/TowerDecorator.h"
 #include "Critter/Critter.h"
 #include "Critter/CritterGroupGenerator.h"
 #include "Critter/CritterObserverDriver.h"
+
 namespace {
 
 enum class AppState { StartMenu, Demos, MapDemo, MapEditor, Playing, GameOver };
@@ -420,14 +426,14 @@ int main() {
                     CritterObserverDriver driver;
                     driver.run();
                 } else if (action == "tower_strategy") {
-                    // TODO(A3 Part 1): TowerStrategyDriver driver; driver.run();
-                    std::cout << "Tower Strategy demo: not implemented yet.\n";
+                    TowerStrategyDriver driver;
+                    driver.run();
                 } else if (action == "critter_factory") {
-                    // TODO(A3 Part 2): CritterFactoryDriver driver; driver.run();
-                    std::cout << "Critter Factory demo: not implemented yet.\n";
+                    CritterFactoryDriver driver;
+                    driver.run();
                 } else if (action == "tower_decorator") {
-                    // TODO(A3 Part 3): TowerDecoratorDriver driver; driver.run();
-                    std::cout << "Tower Decorator demo: not implemented yet.\n";
+                    TowerDecoratorDriver driver;
+                    driver.run();
                 } else if (action == "back") {
                     state = AppState::StartMenu;
                 }
@@ -550,11 +556,12 @@ int main() {
                     const std::string action = hud.handlePlayClick(mouseF, sel);
 
                     if (action == "upgrade" && selectedTower >= 0) {
-                        Tower& t = *towers[static_cast<std::size_t>(selectedTower)];
-                        const int cost = t.getUpgradeCost();
-                        if (t.canUpgrade() && hud.getGold() >= cost) {
+                        auto& slot = towers[static_cast<std::size_t>(selectedTower)];
+                        const int cost = slot->getUpgradeCost();
+                        if (slot->canUpgrade() && hud.getGold() >= cost) {
                             hud.setGold(hud.getGold() - cost);
-                            t.upgrade();
+                            // Decorator pattern: wrap in LevelUpDecorator instead of Tower::upgrade().
+                            slot = std::make_unique<LevelUpDecorator>(std::move(slot));
                         }
                     } else if (action == "sell" && selectedTower >= 0) {
                         Tower& t = *towers[static_cast<std::size_t>(selectedTower)];
@@ -571,14 +578,29 @@ int main() {
                         hud.clearShopSelection();
                         layoutMap();
                     } else if (action == "cycle_strategy" && selectedTower >= 0) {
-                        // TODO(A3 Part 1): give the selected tower the next TargetingStrategy
-                        // (nearest tower -> nearest exit -> strongest -> weakest -> ...).
-                        std::cout << "Targeting strategies: not implemented yet.\n";
+                        towers[static_cast<std::size_t>(selectedTower)]->cycleStrategies();
                     } else if ((action == "add_splash" || action == "add_burning" ||
                                 action == "add_freezing") && selectedTower >= 0) {
-                        // TODO(A3 Part 3): if the player can pay, wrap the selected tower:
-                        // towers[selectedTower] = std::make_unique<SplashDecorator>(std::move(towers[selectedTower]));
-                        std::cout << "Tower decorators: not implemented yet.\n";
+                        auto& slot = towers[static_cast<std::size_t>(selectedTower)];
+                        const int splashCost = 80;
+                        const int burnCost = 100;
+                        const int freezeCost = 90;
+                        if (action == "add_splash" && !slot->hasEffect("SPLASH") &&
+                            hud.getGold() >= splashCost) {
+                            hud.setGold(hud.getGold() - splashCost);
+                            slot = std::make_unique<SplashDecorator>(std::move(slot));
+                            slot->addInvestment(splashCost);
+                        } else if (action == "add_burning" && !slot->hasEffect("BURN") &&
+                                   hud.getGold() >= burnCost) {
+                            hud.setGold(hud.getGold() - burnCost);
+                            slot = std::make_unique<BurningDecorator>(std::move(slot));
+                            slot->addInvestment(burnCost);
+                        } else if (action == "add_freezing" && !slot->hasEffect("FREEZE") &&
+                                   hud.getGold() >= freezeCost) {
+                            hud.setGold(hud.getGold() - freezeCost);
+                            slot = std::make_unique<FreezingDecorator>(std::move(slot));
+                            slot->addInvestment(freezeCost);
+                        }
                     } else if (action == "start_wave") {
                         startWave();
                     } else if (action == "toggle_fullscreen") {
@@ -708,8 +730,9 @@ int main() {
             hud.setWaveInfo(waveNumber,
                             waveInProgress ? wave.crittersRemaining() : 0,
                             waveInProgress);
-            // TODO(A3 Part 1): show the selected tower's strategy on its TARGET button, e.g.
-            // if (sel) hud.setTargetingName(sel->getStrategy().getName());
+            if (sel != nullptr) {
+                hud.setTargetingName(sel->getStrategy());
+            }
             hud.drawPlayHud(window, sel);
             if (const Critter* inspected = CritterView::findById(wave.getActiveCritters(), selectedCritterID)) {
                 const float panelH = 170.f;

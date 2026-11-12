@@ -12,22 +12,24 @@ constexpr float kRefundRatio = 0.70f; // 70% of money spent when sold
 }
 
 Tower::Tower(int row, int col, int buyCost, float baseRange, int basePower,
-             float baseFireRate, int maxLevel)
+    float baseFireRate, int maxLevel)
     : row(row),
-      col(col),
-      level(1),
-      maxLevel(std::max(1, maxLevel)),
-      buyCost(buyCost),
-      totalSpent(buyCost),
-      baseRange(baseRange),
-      basePower(basePower),
-      baseFireRate(baseFireRate),
-      range(0.f),
-      power(0),
-      fireRate(0.f),
-      cooldown(0.f) {
+    col(col),
+    level(1),
+    maxLevel(std::max(1, maxLevel)),
+    buyCost(buyCost),
+    totalSpent(buyCost),
+    baseRange(baseRange),
+    basePower(basePower),
+    baseFireRate(baseFireRate),
+    range(0.f),
+    power(0),
+    fireRate(0.f),
+    cooldown(0.f), strategyID(0)
+    {
     refreshStats();
-}
+    this->targetingStrategy = std::make_unique<NearestToExitStrategy>();
+    }
 
 int Tower::getRow() const { return row; }
 int Tower::getCol() const { return col; }
@@ -55,6 +57,35 @@ bool Tower::hasJustFired() const { return justFired; }
 float Tower:: getLastTargetRow() const { return lastTargetRow; }
 float Tower:: getLastTargetCol() const { return lastTargetCol; }
 
+std::string Tower::getStrategy() const {
+    return this->targetingStrategy->getName();
+}
+
+void Tower::setStrategy(std::unique_ptr<TargetingStrategy> newStrategy) {
+    if (newStrategy == nullptr) return;
+    this->targetingStrategy = std::move(newStrategy);
+    notify();
+}
+
+void Tower::cycleStrategies() {
+    // Cycle from whatever strategy is currently set (works after setStrategy too).
+    const std::string name = targetingStrategy ? targetingStrategy->getName() : "";
+    if (name == "NEAREST TO EXIT") {
+        strategyID = 1;
+        targetingStrategy = std::make_unique<NearestToTowerStrategy>();
+    } else if (name == "NEAREST TO TOWER") {
+        strategyID = 2;
+        targetingStrategy = std::make_unique<StrongestStrategy>();
+    } else if (name == "STRONGEST") {
+        strategyID = 3;
+        targetingStrategy = std::make_unique<WeakestStrategy>();
+    } else {
+        strategyID = 0;
+        targetingStrategy = std::make_unique<NearestToExitStrategy>();
+    }
+    notify();
+}
+
 bool Tower::canUpgrade() const { return level < maxLevel; }
 
 bool Tower::upgrade() {
@@ -79,25 +110,34 @@ void Tower::refreshStats() {
 
 std::vector<Critter*> Tower::detectTargets(const std::vector<Critter*>& critters) const {
     std::vector<Critter*> inRange;
-    for (Critter* c : critters) {
-        if (c != nullptr && c->isAlive() && c->distanceTo(row, col) <= range) {
-            inRange.push_back(c);
+    const float reach = getRange();
+    const int r = getRow();
+    const int c = getCol();
+    for (Critter* critter : critters) {
+        if (critter != nullptr && critter->isAlive() && critter->distanceTo(r, c) <= reach) {
+            inRange.push_back(critter);
         }
     }
     return inRange;
 }
 
 Critter* Tower::selectTarget(const std::vector<Critter*>& inRange) const {
-    Critter* best = nullptr;
-    for (Critter* c : inRange) {
-        if (c == nullptr || !c->isAlive()) {
-            continue;
-        }
-        if (best == nullptr || c->getPathIndex() > best->getPathIndex()) {
-            best = c;
-        }
+    return targetingStrategy->choose(*this, inRange);
+}
+
+Critter* Tower::peekTarget(const std::vector<Critter*>& critters) const {
+    return selectTarget(detectTargets(critters));
+}
+
+bool Tower::hasEffect(const std::string& /*tag*/) const { return false; }
+
+std::string Tower::getEffectTags() const { return ""; }
+
+void Tower::addInvestment(int gold) {
+    if (gold > 0) {
+        totalSpent += gold;
+        notify();
     }
-    return best;
 }
 
 void Tower::update(float dt, std::vector<Critter*>& critters) {
@@ -105,19 +145,21 @@ void Tower::update(float dt, std::vector<Critter*>& critters) {
     if (cooldown > 0.f) {
         cooldown -= dt;
     }
-    
+
     // Detect and select every frame (not only when ready to fire) so the
     // tower keeps turning to follow its target while it reloads.
+    // Virtual getters / fireAt() let an outer decorator change range and shots.
     const std::vector<Critter*> inRange = detectTargets(critters);
+
     Critter* target = selectTarget(inRange);
-    if (target == nullptr) { // if there is no target, stop
+    if (target == nullptr) {
         return;
     }
 
     // Face the target. Screen y grows downward (+row), so atan2(row, col)
     // gives SFML's clockwise angle with 0 degrees pointing right.
-    const float dRow = target->getRow() - static_cast<float>(row);
-    const float dCol = target->getCol() - static_cast<float>(col);
+    const float dRow = target->getRow() - static_cast<float>(getRow());
+    const float dCol = target->getCol() - static_cast<float>(getCol());
     facingDegrees = std::atan2(dRow, dCol) * 180.f / 3.14159265f;
 
     if (cooldown > 0.f) {
@@ -129,5 +171,6 @@ void Tower::update(float dt, std::vector<Critter*>& critters) {
     lastTargetCol = target->getCol();
     fireAt(*target, critters);
     justFired = true;
-    cooldown = (fireRate > 0.f) ? (1.f / fireRate) : 1.f;
+    const float rate = getFireRate();
+    cooldown = (rate > 0.f) ? (1.f / rate) : 1.f;
 }

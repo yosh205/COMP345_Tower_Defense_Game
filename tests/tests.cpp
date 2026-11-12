@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "Critter/Critter.h"
+#include "Critter/CritterFactory.h"
 #include "Critter/CritterGroupGenerator.h"
 #include "Map/Map.h"
 #include "Map/MapExamples.h"
@@ -366,28 +367,82 @@ void testCritterDamage() {
     CHECK(!critter.isAlive());
 }
 
+void testCritterFactory() {
+    std::cout << "\n[Critter factory] The factory creates critters and waves from the wave number\n";
+    const Critter normal = CritterFactory::createCritter(CritterKind::Normal, 1);
+    const Critter fast = CritterFactory::createCritter(CritterKind::Fast, 1);
+    const Critter armored = CritterFactory::createCritter(CritterKind::Armored, 1);
+    CHECK(normal.getKind() == CritterKind::Normal && normal.getLevel() == 1);
+    CHECK(normal.getMaxHitPoints() == 110);  // 100 + 10% for wave 1
+    CHECK(fast.getKind() == CritterKind::Fast && fast.getBaseSpeed() > normal.getBaseSpeed());
+    CHECK(fast.getMaxHitPoints() < normal.getMaxHitPoints());
+    CHECK(armored.getKind() == CritterKind::Armored && armored.getMaxHitPoints() > normal.getMaxHitPoints());
+    CHECK(armored.getBaseSpeed() < normal.getBaseSpeed());
+    CHECK(CritterFactory::createCritter(CritterKind::Normal, 0).getLevel() == 1);  // wave 0 counts as 1
+
+    // Every kind gets stronger and faster from one wave to the next.
+    bool kindsGrow = true;
+    for (CritterKind kind : {CritterKind::Normal, CritterKind::Fast, CritterKind::Armored}) {
+        for (int wave = 1; wave < 20; ++wave) {
+            const Critter now = CritterFactory::createCritter(kind, wave);
+            const Critter next = CritterFactory::createCritter(kind, wave + 1);
+            kindsGrow = kindsGrow && next.getMaxHitPoints() > now.getMaxHitPoints() &&
+                        next.getBaseSpeed() > now.getBaseSpeed() && next.getLevel() == wave + 1;
+        }
+    }
+    CHECK(kindsGrow);
+
+    // Tougher kinds join as more waves are destroyed.
+    const WavePlan first = CritterFactory::planWave(1);
+    CHECK(first.normal > 0 && first.fast == 0 && first.armored == 0);
+    CHECK(CritterFactory::planWave(2).fast > 0 && CritterFactory::planWave(2).armored == 0);
+    CHECK(CritterFactory::planWave(3).armored > 0);
+
+    // Each wave is harder than the one before: at least as many critters, more hit points in total.
+    bool wavesGrow = true;
+    int previousCount = 0;
+    int previousHp = 0;
+    for (int wave = 1; wave <= 20; ++wave) {
+        int totalHp = 0;
+        for (const Critter& c : CritterFactory::createWave(wave)) {
+            totalHp += c.getMaxHitPoints();
+        }
+        const int count = CritterFactory::planWave(wave).total();
+        wavesGrow = wavesGrow && count >= previousCount && totalHp > previousHp;
+        previousCount = count;
+        previousHp = totalHp;
+    }
+    CHECK(wavesGrow);
+
+    // createWave() follows the plan, fastest kind first.
+    const std::vector<Critter> wave5 = CritterFactory::createWave(5);
+    const WavePlan plan5 = CritterFactory::planWave(5);
+    CHECK(static_cast<int>(wave5.size()) == plan5.total());
+    CHECK(wave5.front().getKind() == CritterKind::Fast);
+    CHECK(wave5.back().getKind() == CritterKind::Armored);
+    int fastCount = 0;
+    for (const Critter& c : wave5) {
+        fastCount += c.getKind() == CritterKind::Fast ? 1 : 0;
+    }
+    CHECK(fastCount == plan5.fast);
+}
+
 void testWaveCreation() {
-    std::cout << "\n[Critter waves] A wave is a group of critters adapted to its difficulty\n";
+    std::cout << "\n[Critter waves] A wave is the group of critters the factory makes for it\n";
     const std::vector<Position> path = makeStraightMap().findPath();
     CritterGroupGenerator wave1(1);
     CritterGroupGenerator wave3(3);
 
-    CHECK(wave1.crittersRemaining() == 20);
+    CHECK(wave1.crittersRemaining() == CritterFactory::planWave(1).total());
+    CHECK(wave3.crittersRemaining() == CritterFactory::planWave(3).total());
     CHECK(wave1.activeCrittersLeft() == 0);  // nobody on the map before spawning
 
-    spawnAll(wave1, path);
     spawnAll(wave3, path);
-    const Critter& firstOfWave1 = wave1.getActiveCritters().front();
-    const Critter& firstOfWave3 = wave3.getActiveCritters().front();
-
     bool allLevel3 = true;
     for (const Critter& c : wave3.getActiveCritters()) {
         allLevel3 = allLevel3 && c.getLevel() == 3;
     }
-    CHECK(allLevel3);                                                    // level = wave number
-    CHECK(firstOfWave3.getMaxHitPoints() > firstOfWave1.getMaxHitPoints());
-    CHECK(firstOfWave3.getBaseSpeed() > firstOfWave1.getBaseSpeed());
-    CHECK(firstOfWave3.getReward() > firstOfWave1.getReward());
+    CHECK(allLevel3);  // level = wave number
 }
 
 void testWaveSpawning() {
@@ -397,7 +452,7 @@ void testWaveSpawning() {
 
     wave.findNextCritter(path);
     CHECK(wave.activeCrittersLeft() == 1);
-    CHECK(wave.crittersRemaining() == 20);  // 1 on the map + 19 waiting
+    CHECK(wave.crittersRemaining() == CritterFactory::planWave(1).total());  // 1 on the map, the rest waiting
     const Critter& first = wave.getActiveCritters().front();
     CHECK(first.getRow() == path.front().row && first.getCol() == path.front().col);
 
@@ -639,12 +694,16 @@ void testCritterOverlap() {
     CHECK(wave.findNextCritter(path));
     CHECK(wave.activeCrittersLeft() == 2);
 
-    // Play the whole wave. Fast critters catch up with slower ones, but on
-    // every frame each critter must stay a full cell behind the one in front.
+    // Play the whole wave. The critter in front is kept slowed (as by a Slow
+    // tower), so the others catch up with it, but on every frame each critter
+    // must stay a full cell behind the one in front.
     float closest = 1e9f;
     for (int step = 0; step < 60 * 600 && wave.crittersRemaining() > 0; ++step) {
         if (wave.crittersRemaining() > wave.activeCrittersLeft()) {
             wave.findNextCritter(path);
+        }
+        if (wave.activeCrittersLeft() > 0) {
+            wave.getActiveCritterPointers().front()->applySlow(0.3f, 1.f);
         }
         wave.moveAlongPath(path, kFrame);
         const std::vector<Critter>& onMap = wave.getActiveCritters();
@@ -696,6 +755,7 @@ int main() {
 
     testCritterStats();
     testCritterDamage();
+    testCritterFactory();
     testWaveCreation();
     testWaveSpawning();
     testWaveMovement();

@@ -337,6 +337,12 @@ void Hud::drawPlayHud(sf::RenderWindow& window, const Tower* selected) const {
                   x + 18.f, y, 1.6f, sf::Color(180, 195, 210));
         y += 22.f;
 
+        const std::string effects = selected->getEffectTags();
+        if (!effects.empty()) {
+            drawLabel(window, effects, x + 18.f, y, 1.6f, sf::Color(255, 180, 100));
+            y += 20.f;
+        }
+
         // Assignment 3, Part 1: which critter the tower shoots (Strategy pattern).
         drawLabel(window, "TARGET", x + 18.f, y + 11.f, 1.6f, sf::Color(160, 175, 195));
         targetingBtn = makeRect(x + 84.f, y, kSidebarWidth - 98.f, 36.f);

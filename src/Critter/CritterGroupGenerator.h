@@ -33,8 +33,8 @@ public:
 	/**
 	 * @brief Creates the critters of a wave and puts them in the waiting queue.
 	 *
-	 * Each wave has 10 Normal, 5 Armored and 5 Fast critters, in that order.
-	 * Hit points grow by 10% of the base value per wave and speed by 0.1 cells/s per wave.
+	 * The critters come from CritterFactory::createWave(): the number of each kind
+	 * and their stats depend on the wave number, so every wave is harder than the last.
 	 * @param waveNb The wave number, starting at 1. Also used as every critter's level.
 	 */
 	CritterGroupGenerator(int waveNb);
