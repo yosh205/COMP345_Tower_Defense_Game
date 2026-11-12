@@ -29,9 +29,11 @@
 #include "Tower/SlowingTower.h"
 #include "Tower/Tower.h"
 #include "Tower/TowerObserverDriver.h"
+#include "Tower/TargetingStrategy.h"
 #include "Critter/Critter.h"
 #include "Critter/CritterGroupGenerator.h"
 #include "Critter/CritterObserverDriver.h"
+
 namespace {
 
 enum class AppState { StartMenu, Demos, MapDemo, MapEditor, Playing, GameOver };

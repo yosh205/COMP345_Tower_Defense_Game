@@ -9,9 +9,13 @@
 
 #include <string>
 #include <vector>
+#include <iostream>
+#include <memory>
 
 #include "../Critter/Critter.h"
 #include "../Observer/Observable.h"
+
+#include "TargetingStrategy.h"
 
 /**
  * @brief Abstract tower placed on a scenery cell.
@@ -65,6 +69,13 @@ public:
     /** @return Shots per second at the current level. */
     float getFireRate() const;
 
+    /*@return Current Targeting strategy's name*/
+    std::string getStrategy() const;
+
+    /**/
+    void setStrategy(std::unique_ptr<TargetingStrategy> newStrategy);
+
+
     /** @return True if the tower is below its maximum level. */
     bool canUpgrade() const;
 
@@ -102,6 +113,9 @@ public:
 
     /** @return Column of the target at the moment of the last shot. */
     float getLastTargetCol() const;
+
+    /*Cycle through the different targeting strategies. Sets the targeting strategy*/
+    void cycleStrategies();
 
 protected:
     /**
@@ -148,11 +162,12 @@ protected:
     int power;        ///< Power at the current level (set by refreshStats()).
     float fireRate;   ///< Shots per second at the current level (set by refreshStats()).
     float cooldown;   ///< Seconds until the next shot is allowed.
-
     float facingDegrees = 0.f;  ///< Current aim; 0 = facing right.
     bool justFired = false;     ///< Set by update() on the frame a shot is fired.
     float lastTargetRow = 0.f;  ///< Target row at the last shot.
     float lastTargetCol = 0.f;  ///< Target column at the last shot.
+    std::unique_ptr<TargetingStrategy> targetingStrategy;
+    int strategyID; // current strategy's ID 0: Nearest Exit, 1:Nearest Tower, 2:Strongest, 3:Weakest
 
 };
 

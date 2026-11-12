@@ -12,22 +12,24 @@ constexpr float kRefundRatio = 0.70f; // 70% of money spent when sold
 }
 
 Tower::Tower(int row, int col, int buyCost, float baseRange, int basePower,
-             float baseFireRate, int maxLevel)
+    float baseFireRate, int maxLevel)
     : row(row),
-      col(col),
-      level(1),
-      maxLevel(std::max(1, maxLevel)),
-      buyCost(buyCost),
-      totalSpent(buyCost),
-      baseRange(baseRange),
-      basePower(basePower),
-      baseFireRate(baseFireRate),
-      range(0.f),
-      power(0),
-      fireRate(0.f),
-      cooldown(0.f) {
+    col(col),
+    level(1),
+    maxLevel(std::max(1, maxLevel)),
+    buyCost(buyCost),
+    totalSpent(buyCost),
+    baseRange(baseRange),
+    basePower(basePower),
+    baseFireRate(baseFireRate),
+    range(0.f),
+    power(0),
+    fireRate(0.f),
+    cooldown(0.f), strategyID(0)
+    {
     refreshStats();
-}
+    this->targetingStrategy = std::make_unique<NearestToExitStrategy>();
+    }
 
 int Tower::getRow() const { return row; }
 int Tower::getCol() const { return col; }
@@ -54,6 +56,16 @@ float Tower::getFacingDegrees() const { return facingDegrees; }
 bool Tower::hasJustFired() const { return justFired; }
 float Tower:: getLastTargetRow() const { return lastTargetRow; }
 float Tower:: getLastTargetCol() const { return lastTargetCol; }
+
+std::string Tower::getStrategy() const {
+    return this->targetingStrategy->getName();
+}
+
+void Tower::setStrategy(std::unique_ptr<TargetingStrategy> newStrategy) {
+    if (newStrategy == nullptr) return;
+    this->targetingStrategy = std::move(newStrategy);
+    notify();
+}
 
 bool Tower::canUpgrade() const { return level < maxLevel; }
 
@@ -88,7 +100,7 @@ std::vector<Critter*> Tower::detectTargets(const std::vector<Critter*>& critters
 }
 
 Critter* Tower::selectTarget(const std::vector<Critter*>& inRange) const {
-    Critter* best = nullptr;
+  /*  Critter* best = nullptr;
     for (Critter* c : inRange) {
         if (c == nullptr || !c->isAlive()) {
             continue;
@@ -97,7 +109,8 @@ Critter* Tower::selectTarget(const std::vector<Critter*>& inRange) const {
             best = c;
         }
     }
-    return best;
+    return best;*/
+    return targetingStrategy->choose(*this,inRange);
 }
 
 void Tower::update(float dt, std::vector<Critter*>& critters) {
@@ -109,7 +122,8 @@ void Tower::update(float dt, std::vector<Critter*>& critters) {
     // Detect and select every frame (not only when ready to fire) so the
     // tower keeps turning to follow its target while it reloads.
     const std::vector<Critter*> inRange = detectTargets(critters);
-    Critter* target = selectTarget(inRange);
+
+    Critter* target = selectTarget(inRange); // THIS IS WHERE YOU CALL CHOOSE() 
     if (target == nullptr) { // if there is no target, stop
         return;
     }
