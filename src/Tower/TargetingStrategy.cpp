@@ -28,7 +28,7 @@ std::string NearestToTowerStrategy::getName() const {
     return "NEAREST TO TOWER";
 }
 
-Critter* NearestToExitStrategy::choose(const Tower& tower, const std::vector<Critter*>& inRange) const {
+Critter* NearestToExitStrategy::choose(const Tower& /*tower*/, const std::vector<Critter*>& inRange) const {
     Critter* best = nullptr;
     for (Critter* c : inRange) {
         if (c == nullptr || !c->isAlive()) {
@@ -45,7 +45,7 @@ std::string NearestToExitStrategy::getName() const {
     return "NEAREST TO EXIT";
 }
 
-Critter* StrongestStrategy::choose(const Tower& tower, const std::vector<Critter*>& inRange) const {
+Critter* StrongestStrategy::choose(const Tower& /*tower*/, const std::vector<Critter*>& inRange) const {
     Critter* strongestCritter = nullptr;
     for (Critter* c : inRange) {
         if (c == nullptr || !c->isAlive()) { continue; }
@@ -60,7 +60,7 @@ std::string StrongestStrategy::getName() const {
     return "STRONGEST";
 }
 
-Critter* WeakestStrategy::choose(const Tower& tower, const std::vector<Critter*>& inRange) const {
+Critter* WeakestStrategy::choose(const Tower& /*tower*/, const std::vector<Critter*>& inRange) const {
     Critter* weakestCritter = nullptr;
     for (Critter* c : inRange) {
         if (c == nullptr || !c->isAlive()) { continue; }

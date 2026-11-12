@@ -1,7 +1,8 @@
 # COMP345_Tower_Defense_Game
 Team project for Concordia University course COMP 345: **intermediate delivery**.
-It also contains Assignments #1 and #2; Assignment 2 adds the Observer pattern to the map,
-towers and critters (see *Observer pattern* below).
+It also contains Assignments #1, #2 and #3. Assignment 2 adds the Observer pattern to the map,
+towers and critters (see *Observer pattern* below). Assignment 3 adds the Strategy, Factory and
+Decorator patterns (see *Design patterns (Assignment 3)* below).
 
 ### Project status
 
@@ -18,6 +19,10 @@ Planned for the final delivery:
 - Inspecting characteristics: the stats of every tower kind in the shop (with the ones the
   player cannot afford greyed out), the critters in play, and the critters of the next wave.
 - Saving and loading maps made in the editor to files.
+- Fixing a known bug with the **Overlap** option: with overlap off, the different kinds of
+  critters can end up walking at the same speed, so the Fast and Armored critters lose what
+  makes them different.
+- Projectiles: drawing each shot flying from the tower to its target.
 
 ## Team Members
 
@@ -80,8 +85,9 @@ few minutes; after a code change only `cmake --build build -j` is needed.
 ### Running the tests
 
 `tests/tests.cpp` checks the game rules of the map, towers, critters and waves,
-including the tower, map and critter observers
-(218 checks). It is a separate program and does not need SFML or a screen.
+including the tower, map and critter observers (Assignment 2), the critter factory,
+the targeting strategies and the tower decorators (Assignment 3)
+(271 checks). It is a separate program and does not need SFML or a screen.
 
 ```bash
 # With CMake (after building as above)
@@ -134,11 +140,19 @@ Everything is in-game menus (no console prompts):
    **Critter Factory** shows the waves `CritterFactory` creates: for wave *n*, how many critters
    of each kind, their hit points, speed, reward and coins stolen, the total hit points, and
    every critter in the order it enters; **Left** / **Right** change the wave, **Esc** go back.
-   **Tower Strategy** and **Tower Decorator** are the other Assignment 3 drivers (in progress).
+   **Tower Strategy** shows four Direct towers on a small map, each on a different targeting
+   strategy, and four critters that do not move. A line goes from each tower to the critter its
+   strategy picks; the sidebar lists the towers' strategies and the critters' hit points. Click a
+   tower (or **Left** / **Right**) to select it, **S** changes its strategy, **Esc** go back.
+   **Tower Decorator** shows one Direct tower shooting a line of five critters. Each key wraps the
+   tower in a decorator while it runs: **U** level up, **S** splash, **B** burning, **F** freezing;
+   the sidebar shows its level, power, range and effects. **R** resets the tower and critters,
+   **Esc** go back. The console prints the tower after every change.
 2. **Shop** (right panel) — click Direct / Area / Slow, then click a green scenery cell to place
 3. **Select tower** — click it on the map to see its range, power and rate of fire, **Upgrade** / **Sell**.
-   **Target** changes which critter it shoots, and **Splash** / **Burn** / **Freeze** add special
-   effects (Assignment 3, in progress)
+   **Target** changes which critter it shoots (the button shows the current strategy), and
+   **Splash** / **Burn** / **Freeze** buy a special effect for it (see *Towers* below).
+   The sidebar lists the effects the tower has.
 4. **Start Wave** — sidebar button; critters enter one per second. While a wave runs the
    sidebar shows how many critters are left; when it ends, the button returns for the next, harder wave.
    Each wave starts with **3 hearts**. A critter that reaches the exit removes half a heart.
@@ -161,7 +175,7 @@ walk along a fixed path from an entry to an exit, and the player places towers
 beside the path to destroy them before they get through. Towers are bought and
 upgraded with money earned by defeating enemies, and enemies arrive in waves
 that become harder over time [1][2]. The specific rules below come from the
-COMP 345 project and Assignment 1 specifications [3][5]; the numbers are the values used in the code.
+COMP 345 project and assignment specifications [3][5][6]; the numbers are the values used in the code.
 
 ### Map
 - The map is a grid whose number of rows and columns is chosen before it is created
@@ -179,11 +193,32 @@ COMP 345 project and Assignment 1 specifications [3][5]; the numbers are the val
 - Every tower has a **buying cost**, **range**, **power**, **rate of fire**, **level**
   (1 to 3) and **refund value**.
 - **Upgrading** costs `buy cost + level × buy cost / 2` and increases power by 25%,
-  range by 15% and rate of fire by 10% per level.
-- **Selling** refunds 70% of all the money spent on the tower (purchase plus upgrades),
+  range by 15% and rate of fire by 10% per level. In the game, an upgrade wraps the tower
+  in a `LevelUpDecorator`.
+- **Selling** refunds 70% of all the money spent on the tower (purchase, upgrades and effects),
   so a higher-level tower sells for more.
-- Each frame a tower **detects** the critters within its range, **selects** the one
-  furthest along the path (closest to the exit), and **shoots** it when its reload time is over.
+- Each frame a tower **detects** the critters within its range, **selects** one with its
+  **targeting strategy**, and **shoots** it when its reload time is over. The player can change
+  the strategy at any time with **Target**; a new tower starts on *nearest to exit*:
+
+| Strategy | Shoots the critter… |
+|---|---|
+| NEAREST TO EXIT | furthest along the path (closest to the exit) |
+| NEAREST TO TOWER | closest to the tower |
+| STRONGEST | with the most hit points left |
+| WEAKEST | with the fewest hit points left |
+
+- A tower can be given **special effects**. Each effect is bought once per tower, adds to
+  its refund value, and works on top of the tower's own effect (any tower type can have
+  all three):
+
+| Effect | Cost | What each shot also does |
+|---|---|---|
+| Splash | 80 | Critters within 1.25 cells of the target take half the tower's power |
+| Burn | 100 | The target burns: 8 hit points per second for 3 s |
+| Freeze | 90 | The target slows to 55% speed for 2 s |
+
+Tower types:
 
 | Tower | Cost | Range | Power | Shots/s | Effect |
 |---|---|---|---|---|---|
@@ -222,6 +257,9 @@ COMP 345 project and Assignment 1 specifications [3][5]; the numbers are the val
 3. COMP 345 Fall 2026, *Assignment #1* specification (Parts 1–3), Concordia University.
 4. COMP 345 Fall 2026, *Assignment #2* specification (Observer pattern, Parts 1–3), Concordia University.
 5. COMP 345, *Project specifications* (Tower Defense game), Concordia University.
+6. COMP 345 Fall 2026, *Assignment #3* specification (Strategy, Factory and Decorator patterns), Concordia University.
+7. E. Gamma, R. Helm, R. Johnson and J. Vlissides, *Design Patterns: Elements of Reusable
+   Object-Oriented Software*, Addison-Wesley, 1994 (Strategy, Factory Method, Decorator).
 
 ## Design
 
@@ -231,10 +269,10 @@ without a window (see `tests/tests.cpp`).
 | Folder | Classes | Responsibility |
 |---|---|---|
 | `src/Map` | `Map`, `generateRandomMap()`, `makeMapExamples()`, `makePlayableMaps()`, `makeMapFromRows()`, `MapEditor` | Grid of cells, setters, tower placement, validity check, entry-to-exit path (breadth-first search); example valid/invalid maps for the demo; the hand-built maps the player can choose, written as rows of text (`E` entry, `X` exit, `.` path, `#` scenery); the editing rules of the map editor (one entry and one exit, what is missing, unused path cells). `Map` is an Observable |
-| `src/Tower` | `Tower` (abstract), `DirectDamageTower`, `AreaDamageTower`, `SlowingTower`, `TowerObserver`, `TowerObserverDriver` | Costs, levels, upgrade/sell, detect → select → shoot. Subclasses only change the shot's effect (`fireAt()`). `Tower` is an Observable; `TowerObserverDriver` plugs in a `TowerObserver` and upgrades the tower so the view is printed again after each change |
+| `src/Tower` | `Tower` (abstract), `DirectDamageTower`, `AreaDamageTower`, `SlowingTower`, `TargetingStrategy` and its four strategies, `TowerDecorator` and its four decorators, `TowerObserver`, `TowerObserverDriver` | Costs, levels, upgrade/sell, detect → select → shoot. Subclasses only change the shot's effect (`fireAt()`); the tower's `TargetingStrategy` (Strategy pattern) selects the target; decorators (Decorator pattern) add levels and special effects. `Tower` is an Observable; `TowerObserverDriver` plugs in a `TowerObserver` and upgrades the tower so the view is printed again after each change |
 | `src/Observer` | `Observable`, `Observer` | Subject/observer base. `attach` / `detach` / `notify` |
 | `src/Critter` | `Critter`, `CritterFactory`, `CritterGroupGenerator`, `CritterObserver`, `CritterObserverDriver` | Critter stats and effects; `CritterFactory` (Factory pattern) creates each critter and each wave from the wave number; the generator spawns the wave and moves it along the path, with rewards and theft. `Critter` is an Observable; `CritterObserver` prints and redraws the watched critters on every change; `CritterObserverDriver` is the Critter Observer Demo |
-| `src/GUI` | `MapView`, `TowerView`, `CritterView`, `Hud`, `MapObserver`, `MapObserverDriver` | Drawing with SFML and the menus/sidebar. Views only read the game objects. `MapObserver` redraws the map in a window on every change; `MapObserverDriver` is the Map Observer demo |
+| `src/GUI` | `MapView`, `TowerView`, `CritterView`, `Hud`, `MapObserver`, `MapObserverDriver`, `TowerStrategyDriver`, `CritterFactoryDriver`, `TowerDecoratorDriver` | Drawing with SFML and the menus/sidebar. Views only read the game objects. `MapObserver` redraws the map in a window on every change; `MapObserverDriver` is the Map Observer demo; the other three drivers are the Assignment 3 demos |
 | `src/main.cpp` | — | Driver: runs the tower observer driver in the console, then the start menu, then each frame spawn → move → pay coins and hearts → towers shoot → draw. At 0 hearts, the game over screen |
 
 ```
@@ -282,6 +320,95 @@ again each time `update()` is called; the controller (a driver or the game) chan
 
 `tests/tests.cpp` checks that each change notifies the observer exactly once, that
 refused changes and detached observers get no update, and that copies start with no observers.
+
+## Design patterns (Assignment 3)
+
+Each pattern has a driver under **Demos** in the start menu, and tests in `tests/tests.cpp`.
+The patterns follow the course slides and Gamma et al. [7].
+
+### Part 1: Strategy — how a tower chooses its target
+
+```
+   Tower ───────has a────────► TargetingStrategy (abstract)
+   selectTarget(inRange)         + choose(tower, inRange) = 0
+     = strategy->choose(...)     + getName() = 0
+                                        ▲
+        NearestToExitStrategy   NearestToTowerStrategy   StrongestStrategy   WeakestStrategy
+```
+
+| Role | Class |
+|---|---|
+| Context | `Tower`: owns a `std::unique_ptr<TargetingStrategy>`; `setStrategy()` replaces it, `cycleStrategies()` moves to the next one (the **Target** button) |
+| Strategy | `TargetingStrategy`: `choose()` gets the living critters in range and returns one, or `nullptr` |
+| Concrete strategies | `NearestToExitStrategy` (furthest path index), `NearestToTowerStrategy` (smallest distance), `StrongestStrategy` (most hit points), `WeakestStrategy` (fewest hit points) |
+
+**Why Strategy:** the tower's detect → select → shoot loop stays the same; only the choice of
+target changes. Each rule is its own class, so a new rule is a new class with no change to
+`Tower` or its subclasses, and the player can swap the rule while the game runs. Ties go to the
+first critter in the list, so the choice is always the same for the same critters.
+
+**Driver:** `TowerStrategyDriver` (**Demos → Tower Strategy**).
+**Tests:** each strategy picks a different critter from the same four; none is picked when nothing
+is in range; dead critters are never picked; changing the strategy changes which critter is shot.
+
+### Part 2: Factory — critter waves that get harder
+
+```
+   CritterGroupGenerator(waveNb) ──asks──► CritterFactory
+                                             + createCritter(kind, waveNb) : Critter
+                                             + planWave(waveNb) : WavePlan
+                                             + createWave(waveNb) : vector<Critter>
+```
+
+| Role | Class |
+|---|---|
+| Factory | `CritterFactory`: the only place critters' hit points, speed and level are decided |
+| Product | `Critter` (kind Normal, Fast or Armored) |
+| Client | `CritterGroupGenerator`: asks for wave *n* and spawns what it gets; it does not know any numbers |
+
+**Why Factory:** how hard wave *n* is depends only on *n*, and that decision is in one class.
+`planWave()` decides how many critters of each kind wave *n* has, `createCritter()` gives each one
+its stats for wave *n*, and `createWave()` puts the whole wave together in entry order.
+Changing the game's difficulty means changing the factory only. The rules are in
+*Critters and waves* above.
+
+**Driver:** `CritterFactoryDriver` (**Demos → Critter Factory**).
+**Tests:** each kind's stats; every value grows from wave 1 to wave 20; tougher kinds join at
+waves 2 and 3; total hit points grow every wave; the wave the generator spawns is the factory's.
+
+### Part 3: Decorator — upgrades and special effects
+
+```
+                Tower (abstract) ◄──────────────wraps──────┐
+                  ▲            ▲                           │
+   DirectDamageTower, ...    TowerDecorator ── inner : unique_ptr<Tower>
+                                    ▲
+          LevelUpDecorator  SplashDecorator  BurningDecorator  FreezingDecorator
+```
+
+| Role | Class |
+|---|---|
+| Component | `Tower`: the getters, `selectTarget()` and `fireAt()` are virtual |
+| Concrete components | `DirectDamageTower`, `AreaDamageTower`, `SlowingTower` |
+| Decorator | `TowerDecorator`: is a `Tower` and owns the tower it wraps; every function forwards to it |
+| Concrete decorators | `LevelUpDecorator` (upgrades the wrapped tower), `SplashDecorator`, `BurningDecorator`, `FreezingDecorator` (each overrides `fireAt()`: the wrapped tower shoots first, then the effect is added) |
+
+The game keeps each tower as a `std::unique_ptr<Tower>` and wraps it again at run time:
+
+```cpp
+towers[i] = std::make_unique<SplashDecorator>(std::move(towers[i]));
+```
+
+**Why Decorator:** effects can be added in any order and combined, so a class per combination
+(Direct + Splash + Burn, …) would not scale. A decorator adds one behaviour to one tower while the
+game runs, and the rest of the game still sees a `Tower`. `hasEffect()` stops the same effect
+being bought twice, and `getEffectTags()` lists the effects for the sidebar, outermost first.
+
+**Driver:** `TowerDecoratorDriver` (**Demos → Tower Decorator**).
+**Tests:** a level-up keeps the tower's type and cell and raises its level, power and range;
+splash hits a neighbour of the target but not a critter further away; burning keeps damaging the
+target; freezing slows only the target; the target takes the same damage as from a plain tower;
+four stacked decorators apply every effect in one shot.
 
 ## Tools and Libraries
 

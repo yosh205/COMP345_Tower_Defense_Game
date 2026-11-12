@@ -1,6 +1,7 @@
 /**
  * @file tests.cpp
- * @brief Test cases for the Map, Tower and Critter parts of Assignment 1.
+ * @brief Test cases for the game rules: map, towers, critters (A1), observers (A2),
+ *        critter factory, targeting strategies and tower decorators (A3).
  *
  * Each test function checks one game rule from the assignment. The program
  * prints PASS or FAIL for every check and returns a non-zero exit code if any
@@ -24,6 +25,8 @@
 #include "Tower/AreaDamageTower.h"
 #include "Tower/DirectDamageTower.h"
 #include "Tower/SlowingTower.h"
+#include "Tower/TargetingStrategy.h"
+#include "Tower/TowerDecorator.h"
 #include "Tower/TowerObserverDriver.h"
 
 #include <sstream>
@@ -731,10 +734,204 @@ void testWaveEnds() {
     CHECK(wave.collectCoinsEarned() > 0);
 }
 
+// ------------------------------------------------- Assignment 3: Strategy
+
+void testTargetingStrategies() {
+    std::cout << "\n[Strategy] Each targeting strategy picks a different critter in range\n";
+    // Tower at (0,0), range 2.5. Four critters in range, each best for one strategy:
+    //   nearTower: closest to the tower      exitMost: furthest along the path
+    //   strong:    most hit points           weak:     fewest hit points
+    DirectDamageTower tower(0, 0);
+    Critter nearTower(CritterKind::Normal, 60, 1.f, 0, 1);  // distance 1
+    Critter exitMost(CritterKind::Normal, 100, 1.f, 0, 2);  // distance 2
+    Critter strong(CritterKind::Normal, 150, 1.f, 1, 1);    // distance 1.41
+    Critter weak(CritterKind::Normal, 20, 1.f, 1, 2);       // distance 2.24
+    nearTower.setPathIndex(1);
+    exitMost.setPathIndex(3);
+    strong.setPathIndex(0);
+    weak.setPathIndex(2);
+    const std::vector<Critter*> inRange = {&nearTower, &exitMost, &strong, &weak};
+
+    const NearestToTowerStrategy nearestTower;
+    const NearestToExitStrategy nearestExit;
+    const StrongestStrategy strongest;
+    const WeakestStrategy weakest;
+    CHECK(nearestTower.choose(tower, inRange) == &nearTower);
+    CHECK(nearestExit.choose(tower, inRange) == &exitMost);
+    CHECK(strongest.choose(tower, inRange) == &strong);
+    CHECK(weakest.choose(tower, inRange) == &weak);
+
+    // Nothing in range: every strategy returns nullptr.
+    const std::vector<Critter*> none;
+    CHECK(nearestTower.choose(tower, none) == nullptr);
+    CHECK(nearestExit.choose(tower, none) == nullptr);
+    CHECK(strongest.choose(tower, none) == nullptr);
+    CHECK(weakest.choose(tower, none) == nullptr);
+
+    // A dead critter is never chosen.
+    weak.takeDamage(weak.getMaxHitPoints());
+    CHECK(weakest.choose(tower, inRange) == &nearTower);
+
+    CHECK(nearestTower.getName() == "NEAREST TO TOWER");
+    CHECK(nearestExit.getName() == "NEAREST TO EXIT");
+    CHECK(strongest.getName() == "STRONGEST");
+    CHECK(weakest.getName() == "WEAKEST");
+}
+
+void testTowerStrategySwitching() {
+    std::cout << "\n[Strategy] A tower's strategy can be changed while the game runs\n";
+    DirectDamageTower tower(0, 0);
+    Critter front(CritterKind::Normal, 50, 1.f, 0, 2);  // furthest along
+    Critter tank(CritterKind::Normal, 200, 1.f, 0, 1);  // most hit points
+    front.setPathIndex(2);
+    tank.setPathIndex(1);
+    std::vector<Critter*> critters = {&front, &tank};
+
+    CHECK(tower.getStrategy() == "NEAREST TO EXIT");  // default
+    CHECK(tower.peekTarget(critters) == &front);
+
+    // Same tower class, new strategy: it now shoots a different critter.
+    tower.setStrategy(std::make_unique<StrongestStrategy>());
+    CHECK(tower.getStrategy() == "STRONGEST");
+    CHECK(tower.peekTarget(critters) == &tank);
+    tower.update(0.f, critters);
+    CHECK(tank.getHitPoints() < 200);
+    CHECK(front.getHitPoints() == 50);
+
+    tower.setStrategy(nullptr);  // ignored
+    CHECK(tower.getStrategy() == "STRONGEST");
+
+    // The TARGET button cycles: exit -> tower -> strongest -> weakest -> exit.
+    DirectDamageTower cycling(0, 0);
+    cycling.cycleStrategies();
+    CHECK(cycling.getStrategy() == "NEAREST TO TOWER");
+    cycling.cycleStrategies();
+    CHECK(cycling.getStrategy() == "STRONGEST");
+    cycling.cycleStrategies();
+    CHECK(cycling.getStrategy() == "WEAKEST");
+    cycling.cycleStrategies();
+    CHECK(cycling.getStrategy() == "NEAREST TO EXIT");
+}
+
+// ------------------------------------------------ Assignment 3: Decorator
+
+/** @brief Fires one shot from tower at the critters (the tower is ready at the start). */
+void fireOnce(Tower& tower, std::vector<Critter*>& critters) {
+    tower.update(0.f, critters);
+}
+
+void testLevelUpDecorator() {
+    std::cout << "\n[Decorator] Wrapping a tower in LevelUpDecorator upgrades it\n";
+    std::unique_ptr<Tower> tower = std::make_unique<DirectDamageTower>(2, 3);
+    const int power1 = tower->getPower();
+    const float range1 = tower->getRange();
+    const std::string typeName = tower->getTypeName();
+
+    tower = std::make_unique<LevelUpDecorator>(std::move(tower));
+    CHECK(tower->getLevel() == 2);
+    CHECK(tower->getPower() > power1);
+    CHECK(tower->getRange() > range1);
+    // Still the same tower: same type and cell.
+    CHECK(tower->getTypeName() == typeName);
+    CHECK(tower->getRow() == 2 && tower->getCol() == 3);
+
+    // Strategy and upgrades reach the wrapped tower.
+    tower->setStrategy(std::make_unique<WeakestStrategy>());
+    CHECK(tower->getStrategy() == "WEAKEST");
+    CHECK(tower->upgrade());
+    CHECK(tower->getLevel() == 3);
+}
+
+void testEffectDecorators() {
+    std::cout << "\n[Decorator] Splash, burning and freezing add effects to a tower's shots\n";
+    // The tower shoots 'target' (furthest along); 'beside' is 1 cell from it
+    // and 'away' is more than 1.25 cells from it.
+    auto makeCritters = [](Critter& target, Critter& beside, Critter& away) {
+        target.setPathIndex(5);
+        beside.setPathIndex(1);
+        away.setPathIndex(0);
+        return std::vector<Critter*>{&target, &beside, &away};
+    };
+
+    // Without decorators: only the target is hit, no burn, no slow.
+    Critter t0(CritterKind::Normal, 100, 1.f, 0, 1), b0(CritterKind::Normal, 100, 1.f, 0, 2),
+        a0(CritterKind::Normal, 100, 1.f, 2, 0);
+    std::vector<Critter*> plainCritters = makeCritters(t0, b0, a0);
+    DirectDamageTower plain(0, 0);
+    CHECK(plain.getEffectTags().empty());
+    fireOnce(plain, plainCritters);
+    const int hpAfterPlainShot = t0.getHitPoints();
+    CHECK(hpAfterPlainShot < 100);
+    CHECK(b0.getHitPoints() == 100);
+    t0.updateEffects(1.f);
+    CHECK(t0.getHitPoints() == hpAfterPlainShot);  // no burn
+    CHECK(t0.getSpeed() == t0.getBaseSpeed());     // no slow
+
+    // Splash: the critter beside the target is hit too, the one further away is not.
+    Critter t1(CritterKind::Normal, 100, 1.f, 0, 1), b1(CritterKind::Normal, 100, 1.f, 0, 2),
+        a1(CritterKind::Normal, 100, 1.f, 2, 0);
+    std::vector<Critter*> splashCritters = makeCritters(t1, b1, a1);
+    std::unique_ptr<Tower> splash =
+        std::make_unique<SplashDecorator>(std::make_unique<DirectDamageTower>(0, 0));
+    CHECK(splash->hasEffect("SPLASH") && !splash->hasEffect("BURN"));
+    fireOnce(*splash, splashCritters);
+    CHECK(t1.getHitPoints() == hpAfterPlainShot);  // the target takes the same damage
+    CHECK(b1.getHitPoints() < 100);
+    CHECK(a1.getHitPoints() == 100);
+
+    // Burning: the target keeps losing hit points after the shot.
+    Critter t2(CritterKind::Normal, 100, 1.f, 0, 1), b2(CritterKind::Normal, 100, 1.f, 0, 2),
+        a2(CritterKind::Normal, 100, 1.f, 2, 0);
+    std::vector<Critter*> burnCritters = makeCritters(t2, b2, a2);
+    std::unique_ptr<Tower> burning =
+        std::make_unique<BurningDecorator>(std::make_unique<DirectDamageTower>(0, 0));
+    fireOnce(*burning, burnCritters);
+    CHECK(t2.getHitPoints() == hpAfterPlainShot);
+    t2.updateEffects(1.f);
+    CHECK(t2.getHitPoints() < hpAfterPlainShot);
+    CHECK(b2.getHitPoints() == 100);  // only the target burns
+
+    // Freezing: the target is slowed down.
+    Critter t3(CritterKind::Normal, 100, 1.f, 0, 1), b3(CritterKind::Normal, 100, 1.f, 0, 2),
+        a3(CritterKind::Normal, 100, 1.f, 2, 0);
+    std::vector<Critter*> freezeCritters = makeCritters(t3, b3, a3);
+    std::unique_ptr<Tower> freezing =
+        std::make_unique<FreezingDecorator>(std::make_unique<DirectDamageTower>(0, 0));
+    fireOnce(*freezing, freezeCritters);
+    CHECK(t3.getSpeed() < t3.getBaseSpeed());
+    CHECK(b3.getSpeed() == b3.getBaseSpeed());
+}
+
+void testStackedDecorators() {
+    std::cout << "\n[Decorator] Decorators stack: one shot applies every effect\n";
+    std::unique_ptr<Tower> tower = std::make_unique<DirectDamageTower>(0, 0);
+    tower = std::make_unique<SplashDecorator>(std::move(tower));
+    tower = std::make_unique<FreezingDecorator>(std::move(tower));
+    tower = std::make_unique<BurningDecorator>(std::move(tower));
+    tower = std::make_unique<LevelUpDecorator>(std::move(tower));
+
+    CHECK(tower->hasEffect("SPLASH") && tower->hasEffect("FREEZE") && tower->hasEffect("BURN"));
+    CHECK(tower->getEffectTags() == "BURN FREEZE SPLASH");  // outermost first
+    CHECK(tower->getLevel() == 2);
+
+    Critter target(CritterKind::Normal, 300, 1.f, 0, 1);
+    Critter beside(CritterKind::Normal, 300, 1.f, 0, 2);
+    target.setPathIndex(5);
+    beside.setPathIndex(1);
+    std::vector<Critter*> critters = {&target, &beside};
+    fireOnce(*tower, critters);
+    const int hpAfterShot = target.getHitPoints();
+    CHECK(hpAfterShot < 300);
+    CHECK(beside.getHitPoints() < 300);           // splash
+    CHECK(target.getSpeed() < target.getBaseSpeed());  // freeze
+    target.updateEffects(1.f);
+    CHECK(target.getHitPoints() < hpAfterShot);   // burn
+}
+
 }  // namespace
 
 int main() {
-    std::cout << "Tower Defense - Assignment 1 tests\n";
+    std::cout << "Tower Defense - tests\n";
 
     testMapCreation();
     testMapSetters();
@@ -762,6 +959,12 @@ int main() {
     testWaveCoins();
     testCritterOverlap();
     testWaveEnds();
+
+    testTargetingStrategies();
+    testTowerStrategySwitching();
+    testLevelUpDecorator();
+    testEffectDecorators();
+    testStackedDecorators();
 
     std::cout << "\n" << (checks - failures) << " / " << checks << " checks passed\n";
     return failures == 0 ? 0 : 1;
