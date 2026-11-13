@@ -2,11 +2,10 @@
  * @file TargetingStrategy.h
  * @brief Assignment 3, Part 1 (Strategy pattern): how a tower chooses which critter to shoot.
  *
- * TODO(A3 Part 1): implement the four strategies in TargetingStrategy.cpp, give
- * Tower a std::unique_ptr<TargetingStrategy> with setStrategy() / getStrategy(),
- * and make Tower::selectTarget() ask the strategy. Default: NearestToExitStrategy
- * (what Tower::selectTarget() does today). Add tests and a way to change the
- * strategy of a selected tower in the game.
+ * Each Tower owns a std::unique_ptr<TargetingStrategy>; Tower::selectTarget() asks
+ * it which critter to shoot. Tower::setStrategy() replaces it and
+ * Tower::cycleStrategies() moves to the next one (the TARGET button in the game).
+ * A new tower uses NearestToExitStrategy.
  */
 #ifndef TargetingStrategy_h
 #define TargetingStrategy_h

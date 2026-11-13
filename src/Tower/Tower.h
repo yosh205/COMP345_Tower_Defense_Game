@@ -188,8 +188,8 @@ protected:
     bool justFired = false;     ///< Set by update() on the frame a shot is fired.
     float lastTargetRow = 0.f;  ///< Target row at the last shot.
     float lastTargetCol = 0.f;  ///< Target column at the last shot.
-    std::unique_ptr<TargetingStrategy> targetingStrategy;
-    int strategyID; // current strategy's ID 0: Nearest Exit, 1:Nearest Tower, 2:Strongest, 3:Weakest
+    std::unique_ptr<TargetingStrategy> targetingStrategy;  ///< Chooses which critter to shoot (Strategy pattern).
+    int strategyID;  ///< Current strategy: 0 nearest exit, 1 nearest tower, 2 strongest, 3 weakest.
 
 };
 
